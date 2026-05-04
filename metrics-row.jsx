@@ -1,0 +1,255 @@
+// TOGA — MetricsRow + ConcursoDonuts v2 — Ultra Premium
+
+// ── MetricsRow: 4 metric cards ──
+function MetricsRow({ shared, setShared }) {
+  const today = shared.dailyLogs[shared.dailyLogs.length - 1] || { hours: 0, questions: 0, reviews: 0 };
+  const last7 = shared.dailyLogs.slice(-7);
+  const weekHours = last7.reduce((a, d) => a + d.hours, 0);
+  const weekQ = last7.reduce((a, d) => a + d.questions, 0);
+
+  const metrics = [
+    { label: 'Horas hoje',       value: today.hours.toFixed(1), goal: shared.goals.dailyHours,    unit: 'h',  color: '#00b8d4',       colorRaw: '#00b8d4',  glow: '#00d9ff', icon: <I.clock   size={13} /> },
+    { label: 'Horas semana',     value: weekHours.toFixed(1),   goal: shared.goals.weeklyHours,   unit: 'h',  color: 'var(--tinta)',  colorRaw: '#5B47B8',  glow: '#7B67D8', icon: <I.target  size={13} /> },
+    { label: 'Questões hoje',    value: today.questions,        goal: shared.goals.dailyQuestions, unit: '',   color: '#00c46a',       colorRaw: '#00c46a',  glow: '#00ff88', icon: <I.bolt    size={13} /> },
+    { label: 'Questões semana',  value: weekQ,                  goal: shared.goals.weeklyQuestions,unit: '',   color: '#f59e0b',       colorRaw: '#f59e0b',  glow: '#ffc107', icon: <I.trophy  size={13} /> },
+  ];
+
+  return (
+    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(4, 1fr)' }} className="metrics-row">
+      {metrics.map((m, i) => {
+        const progress = Math.min(1, parseFloat(m.value) / (m.goal || 1));
+        const done = progress >= 1;
+        return (
+          <div key={i} className="glass anim-slide-up" style={{
+            padding: '16px 18px',
+            animationDelay: `${i * 55}ms`,
+            background: done
+              ? `linear-gradient(145deg, rgba(255,255,255,0.85), rgba(255,255,255,0.65)), radial-gradient(ellipse at 0% 0%, ${m.colorRaw}12, transparent 60%)`
+              : 'var(--card-bg)',
+            boxShadow: done
+              ? `0 0 0 1px ${m.colorRaw}44, 0 0 24px ${m.glow}33, var(--card-shadow)`
+              : undefined,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                color: 'var(--text-muted)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700,
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>
+                <span style={{ color: m.colorRaw, filter: `drop-shadow(0 0 4px ${m.glow})` }}>{m.icon}</span>
+                {m.label}
+              </div>
+              {done && (
+                <div style={{
+                  padding: '2px 7px', borderRadius: 99,
+                  background: `${m.colorRaw}18`, border: `1px solid ${m.colorRaw}44`,
+                  fontSize: 9, color: m.colorRaw, fontWeight: 800, letterSpacing: '0.10em',
+                  fontFamily: 'JetBrains Mono, monospace',
+                }}>✓ META</div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+              <span className="num" style={{
+                fontSize: 30, fontWeight: 800, color: m.colorRaw,
+                letterSpacing: '-0.03em',
+                filter: done ? `drop-shadow(0 0 10px ${m.glow}66)` : undefined,
+              }}>{m.value}{m.unit}</span>
+              <span className="num" style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
+                / {m.goal}{m.unit}
+              </span>
+            </div>
+
+            {/* Thin progress bar */}
+            <div style={{ height: 4, background: 'rgba(30,32,48,0.07)', borderRadius: 99, overflow: 'hidden', position: 'relative' }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                width: `${progress * 100}%`,
+                background: done
+                  ? `linear-gradient(90deg, ${m.colorRaw}, ${m.glow})`
+                  : `linear-gradient(90deg, ${m.colorRaw}aa, ${m.colorRaw})`,
+                borderRadius: 99,
+                boxShadow: done ? `0 0 8px ${m.glow}` : undefined,
+                transition: 'width 700ms cubic-bezier(0.16,1,0.3,1)',
+              }} />
+            </div>
+          </div>
+        );
+      })}
+      <style>{`@media (max-width: 900px) { .metrics-row { grid-template-columns: repeat(2, 1fr) !important; } }`}</style>
+    </div>
+  );
+}
+
+// ── ConcursoDonuts — Redesigned, organic layout ──
+function ConcursoDonuts({ concursos, setConcursos }) {
+  const [editing, setEditing] = React.useState(null);
+  const update = (id, patch) => setConcursos(arr => arr.map(c => c.id === id ? { ...c, ...patch } : c));
+  const add = () => {
+    const id = `c-${Date.now()}`;
+    const date = new Date(); date.setDate(date.getDate() + 90);
+    setConcursos(arr => [...arr, { id, name: 'Novo concurso', date: date.toISOString().slice(0,10), startedAt: new Date().toISOString().slice(0,10) }]);
+    setEditing(id);
+  };
+  const remove = (id) => setConcursos(arr => arr.filter(c => c.id !== id));
+  const editingC = concursos.find(c => c.id === editing);
+
+  return (
+    <div className="glass anim-slide-up" style={{ padding: '16px 18px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Header row with inline "new" button */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editingC ? 12 : 14 }}>
+        <div>
+          <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, textTransform: 'uppercase' }}>
+            TEMPO ATÉ A PROVA
+          </div>
+        </div>
+        <button className="btn-neon" onClick={add} style={{ padding: '5px 11px', fontSize: 11, gap: 5 }}>
+          <I.plus size={10} stroke={2.5} /> Novo
+        </button>
+      </div>
+
+      {/* Edit form */}
+      {editingC && (
+        <div className="anim-slide-up" style={{
+          display: 'grid', gap: 8, padding: '12px 14px',
+          background: 'rgba(0,184,212,0.05)', borderRadius: 12, marginBottom: 14,
+          border: '1px solid rgba(0,184,212,0.22)',
+        }}>
+          <input className="input-base" placeholder="Nome do concurso" value={editingC.name}
+            autoFocus onKeyDown={e => { if (e.key === 'Enter') setEditing(null); }}
+            onChange={e => update(editingC.id, { name: e.target.value })} />
+          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: '1fr 1fr' }}>
+            <div>
+              <div style={{ color: 'var(--text-dim)', fontSize: 10, marginBottom: 3, fontWeight: 600 }}>Data da prova</div>
+              <input className="input-base" type="date" value={editingC.date}
+                onChange={e => update(editingC.id, { date: e.target.value })} style={{ width: '100%' }} />
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-dim)', fontSize: 10, marginBottom: 3, fontWeight: 600 }}>Início</div>
+              <input className="input-base" type="date" value={editingC.startedAt || ''}
+                onChange={e => update(editingC.id, { startedAt: e.target.value })} style={{ width: '100%' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="btn-neon" onClick={() => setEditing(null)} style={{ flex: 1, justifyContent: 'center', fontSize: 12 }}>OK</button>
+            <button className="btn-ghost" onClick={() => { remove(editingC.id); setEditing(null); }}
+              style={{ color: 'var(--coral)', borderColor: 'rgba(232,93,93,0.3)' }}>
+              <I.close size={11} /> Remover
+            </button>
+          </div>
+        </div>
+      )}
+
+      {concursos.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px 0' }}>
+          <div style={{ fontSize: 28, opacity: 0.25 }}>⚖️</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+            Nenhum concurso.<br />Clique em <strong>Novo</strong> para adicionar.
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid', gap: 10, flex: 1,
+          gridTemplateColumns: concursos.length > 1 ? 'repeat(2, 1fr)' : '1fr',
+          alignItems: 'start',
+        }}>
+          {concursos.map((c, idx) => (
+            <ConcursoDonutItem key={c.id} c={c} onEdit={() => setEditing(c.id)} idx={idx} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConcursoDonutItem({ c, onEdit, idx }) {
+  const [hov, setHov] = React.useState(false);
+  const days = window.DA.daysUntil(c.date);
+  const startedAt = c.startedAt ? new Date(c.startedAt) : new Date();
+  const target = c.date ? new Date(c.date) : new Date();
+  const totalDays = Math.max(1, Math.round((target - startedAt) / 86400000));
+  const elapsed = Math.max(0, totalDays - (days || 0));
+  const remainingPct = 1 - Math.min(1, elapsed / totalDays);
+
+  let color = '#00b8d4', colorRaw = '#00b8d4', glow = '#00d9ff';
+  if (days !== null && days < 30) { color = 'var(--coral)'; colorRaw = '#E85D5D'; glow = '#FF7070'; }
+  else if (days !== null && days < 60) { color = '#f59e0b'; colorRaw = '#f59e0b'; glow = '#ffc107'; }
+
+  const r = 36; const circ = 2 * Math.PI * r;
+  const urgent = days !== null && days < 30 && days >= 0;
+
+  return (
+    <div
+      onClick={onEdit}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer',
+        padding: '14px 10px', borderRadius: 14,
+        background: hov
+          ? `linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7))`
+          : `radial-gradient(ellipse at 50% 0%, ${colorRaw}0d, transparent 70%)`,
+        border: `1px solid ${colorRaw}28`,
+        boxShadow: hov ? `0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px ${colorRaw}33` : 'none',
+        transform: hov ? 'translateY(-2px)' : 'none',
+        transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
+        animation: `scale-in 400ms ${idx * 80}ms cubic-bezier(0.16,1,0.3,1) both`,
+      }}
+    >
+      {urgent && (
+        <div style={{
+          padding: '2px 8px', borderRadius: 99, marginBottom: 2,
+          background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)',
+          fontSize: 9, color: '#f59e0b', fontWeight: 800, letterSpacing: '0.12em',
+          fontFamily: 'JetBrains Mono, monospace',
+        }}>URGENTE</div>
+      )}
+
+      {/* Donut */}
+      <div style={{ position: 'relative', width: 80, height: 80 }}>
+        <svg viewBox="0 0 100 100" width={80} height={80} style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
+          <circle cx="50" cy="50" r={r} fill="none" stroke={`${colorRaw}14`} strokeWidth="8" />
+          <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="8"
+            strokeDasharray={`${remainingPct * circ} ${circ}`} strokeLinecap="round"
+            style={{
+              filter: `drop-shadow(0 0 6px ${glow}88)`,
+              transition: 'stroke-dasharray 700ms cubic-bezier(0.16,1,0.3,1)',
+            }} />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
+          <div>
+            <div className="num" style={{
+              fontSize: 20, fontWeight: 800, color, letterSpacing: '-0.03em', lineHeight: 1,
+              filter: `drop-shadow(0 0 6px ${glow}66)`,
+            }}>{days ?? '—'}</div>
+            <div style={{ fontSize: 8, color: 'var(--text-dim)', letterSpacing: '0.15em', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>DIAS</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Name + date */}
+      <div style={{ textAlign: 'center', minWidth: 0, width: '100%', paddingTop: 2 }}>
+        <div className="font-display" style={{
+          fontSize: 12, fontWeight: 700, color: 'var(--text-primary)',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{c.name}</div>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+          {c.date ? new Date(c.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' }) : 'sem data'}
+        </div>
+      </div>
+
+      {/* Thin progress strip */}
+      <div style={{ width: '100%', height: 3, background: `${colorRaw}18`, borderRadius: 99, overflow: 'hidden', marginTop: 2 }}>
+        <div style={{
+          height: '100%', width: `${(1 - remainingPct) * 100}%`,
+          background: `linear-gradient(90deg, ${colorRaw}88, ${colorRaw})`,
+          borderRadius: 99,
+          transition: 'width 700ms cubic-bezier(0.16,1,0.3,1)',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+window.MetricsRow = MetricsRow;
+window.ConcursoDonuts = ConcursoDonuts;

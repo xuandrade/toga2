@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TOGA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css?v=toga2" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="icons.jsx"></script>
+<script type="text/babel" src="shield-badge.jsx"></script>
+<script type="text/babel" src="splash.jsx"></script>
+<script type="text/babel" src="pet.jsx"></script>
+<script type="text/babel" src="header.jsx"></script>
+<script type="text/babel" src="metrics-row.jsx"></script>
+<script type="text/babel" src="gavel-bar.jsx"></script>
+<script type="text/babel" src="syllabus-matrix.jsx"></script>
+<script type="text/babel" src="syllabus-disc.jsx"></script>
+<script type="text/babel" src="edital-heatmap.jsx"></script>
+<script type="text/babel" src="heatmaps.jsx"></script>
+<script type="text/babel" src="backup.jsx"></script>
+<script type="text/babel">
+// ConcursoTimeline — upcoming DP exams
+function ConcursoTimeline({ concursos, onAddConcurso }) {
+return (
+<div style={{ overflowX: 'auto', paddingBottom: 4 }}>
+<div style={{ display: 'flex', gap: 14, minWidth: 'min-content' }}>
+{concursos.map(c => {
+const days = window.DA.daysUntil(c.date);
+const urgent = days !== null && days < 30 && days >= 0;
+const soon = days !== null && days < 90 && days >= 30;
+return (
+<div key={c.id}
+className={`glass ${urgent ? 'pulse-amber' : ''}`}
+style={{ padding: '14px 18px', minWidth: 240, flexShrink: 0 }}>
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+<div style={{ fontSize: 11, letterSpacing: '0.15em', color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+CONCURSO
+</div>
+{urgent && (
+<div style={{ fontSize: 10, color: 'var(--neon-gold)', fontWeight: 600, letterSpacing: '0.1em' }}>
+PRÓXIMO
+</div>
+)}
+</div>
+<div className="font-display" style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>{c.name}</div>
+{c.date ? (
+<React.Fragment>
+<div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+<span className="num" style={{ fontSize: 28, fontWeight: 700, color: urgent ? 'var(--neon-gold)' : soon ? 'var(--neon-cyan)' : 'var(--text-primary)' }}>
+{days}
+</span>
+<span style={{ fontSize: 12, color: 'var(--text-muted)' }}>dias</span>
+<span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>
+{new Date(c.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+</span>
+</div>
+<div style={{ height: 4, background: 'rgba(30,32,48,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+<div className="gradient-bar-green-cyan" style={{ height: '100%', width: `${Math.min(100, Math.max(0, 100 - (days || 0) / 2))}%` }} />
+</div>
+<div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 10, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+<span>Preparação</span>
+<span>{Math.round(Math.min(100, Math.max(0, 100 - (days || 0) / 2)))}%</span>
+</div>
+</React.Fragment>
+) : (
+<button className="btn-ghost" style={{ marginTop: 8 }}>
+<I.calendar size={12} /> Definir data
+</button>
+)}
+</div>
+);
+})}
+<button onClick={onAddConcurso} className="glass" style={{
+minWidth: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+gap: 6, color: 'var(--text-muted)', cursor: 'pointer', border: '1px dashed rgba(30,32,48,0.12)',
+background: 'transparent',
+}}>
+<I.plus size={20} />
+<span style={{ fontSize: 12 }}>Novo concurso</span>
+</button>
+</div>
+</div>
+);
+}
+window.ConcursoTimeline = ConcursoTimeline;
+</script>
+<script type="text/babel" src="interactions.jsx"></script>
+<script type="text/babel" src="session-log.jsx"></script>
+<script type="text/babel" src="stats.jsx"></script>
+<script type="text/babel" src="historico.jsx"></script>
+<script type="text/babel" src="constancia.jsx"></script>
+<script type="text/babel">
+// TOGA — Insights Panel
+function computeInsights(shared, objState, discState) {
+  const logs = shared.dailyLogs || [];
+  const insights = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayISO = today.toISOString().slice(0,10);
+  const logByDate = (iso) => logs.find(l => l.date === iso);
+  const hoursLast = (n) => {
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today - i*86400000);
+      const l = logByDate(d.toISOString().slice(0,10));
+      if (l) total += l.hours || 0;
+    }
+    return total;
+  };
+  const todayLog = logByDate(todayISO);
+  const studiedToday = todayLog && ((todayLog.hours||0) + (todayLog.questions||0) + (todayLog.reviews||0)) > 0;
+  if (!studiedToday && today.getHours() >= 9) {
+    insights.push({ id: 'no-study-today', priority: 10, icon: '⏰', color: 'var(--ambar)', title: 'Nenhum estudo registrado hoje', body: 'Registre sua sessão de hoje para manter o streak e alimentar o pet.', action: null });
+  }
+  const yest = new Date(today - 86400000).toISOString().slice(0,10);
+  const yestLog = logByDate(yest);
+  const studiedYest = yestLog && ((yestLog.hours||0) + (yestLog.questions||0) + (yestLog.reviews||0)) > 0;
+  if (shared.streak > 0 && !studiedYest && !studiedToday) {
+    insights.push({ id: 'streak-risk', priority: 9, icon: '🔥', color: 'var(--coral)', title: `Streak de ${shared.streak} dia${shared.streak>1?'s':''} em risco!`, body: 'Você não estudou ontem. Estude hoje para não perder sua sequência.', action: null });
+  }
+  const lastLogByDisc = {};
+  logs.forEach(l => { if (l.discipline && (!lastLogByDisc[l.discipline] || l.date > lastLogByDisc[l.discipline])) lastLogByDisc[l.discipline] = l.date; });
+  const loggedDiscs = Object.keys(lastLogByDisc);
+  if (loggedDiscs.length > 0) {
+    const worstDisc = loggedDiscs.map(d => ({ d, days: Math.floor((today - new Date(lastLogByDisc[d]+'T00:00:00'))/86400000) })).sort((a,b) => b.days - a.days)[0];
+    if (worstDisc && worstDisc.days >= 7) {
+      insights.push({ id: 'neglected-disc', priority: 8, icon: '📚', color: 'var(--tinta)', title: `${worstDisc.d.length > 25 ? worstDisc.d.slice(0,23)+'…' : worstDisc.d} negligenciada`, body: `Você não estuda ${worstDisc.d} há ${worstDisc.days} dias.`, action: null });
+    }
+  }
+  const weeklyHours = hoursLast(7);
+  const goalWeekly = shared.goals?.weeklyHours || 28;
+  const weekPct = weeklyHours / goalWeekly * 100;
+  if (goalWeekly > 0 && weekPct < 60 && logs.length > 0) {
+    insights.push({ id: 'below-weekly-goal', priority: 7, icon: '📉', color: 'var(--ambar)', title: `Ritmo semanal: ${weekPct.toFixed(0)}% da meta`, body: `Você fez ${weeklyHours.toFixed(1)}h esta semana. Faltam ${(goalWeekly - weeklyHours).toFixed(1)}h para atingir ${goalWeekly}h/semana.`, action: null });
+  }
+  const FLAGS_O = ['lei','doutrina','juris','questoes','revisao'];
+  let reviewCount = 0;
+  objState.subjects.forEach(s => s.topics.forEach(t => {
+    const hasCheck = FLAGS_O.some(f => t[f]);
+    if (hasCheck && t.lastStudiedAt) { const days = Math.floor((today - new Date(t.lastStudiedAt))/86400000); if (days >= 30) reviewCount++; }
+  }));
+  if (reviewCount > 0) {
+    insights.push({ id: 'review-due', priority: 6, icon: '🔄', color: '#F59E0B', title: `${reviewCount} tópico${reviewCount>1?'s':''} pedindo revisão`, body: 'Você tem tópicos que não revisita há mais de 30 dias. A revisão espaçada é crucial para a retenção.', action: null });
+  }
+  if (weekPct >= 90 && logs.length > 0) {
+    insights.push({ id: 'great-rhythm', priority: 5, icon: '🏆', color: 'var(--esmeralda)', title: `Ritmo excelente! ${weekPct.toFixed(0)}% da meta`, body: `Você fez ${weeklyHours.toFixed(1)}h esta semana. Continue assim — consistência é o que aprova.`, action: null });
+  }
+  const totalCorrect = logs.reduce((a,l) => a + (l.correct||0), 0);
+  const totalWrong = logs.reduce((a,l) => a + (l.wrong||0), 0);
+  const totalQ = totalCorrect + totalWrong;
+  if (totalQ >= 20) {
+    const accPct = totalCorrect / totalQ * 100;
+    if (accPct < 60) insights.push({ id: 'low-accuracy', priority: 8, icon: '🎯', color: 'var(--coral)', title: `Taxa de acerto: ${accPct.toFixed(0)}%`, body: `Foque em teoria e lei seca antes de resolver mais questões.`, action: null });
+  }
+  const activeDays = logs.filter(l => (l.hours||0)+(l.questions||0)+(l.reviews||0) > 0).length;
+  const totalChecks = objState.subjects.reduce((a, s) => a + s.topics.reduce((b, t) => b + FLAGS_O.filter(f => t[f]).length, 0), 0);
+  const totalPossible = objState.subjects.reduce((a, s) => a + s.topics.length * 5, 0);
+  const editPct = totalPossible > 0 ? totalChecks / totalPossible * 100 : 0;
+  if (activeDays >= 10 && editPct < 15) {
+    insights.push({ id: 'low-edital-progress', priority: 6, icon: '📋', color: 'var(--tinta)', title: `Apenas ${editPct.toFixed(0)}% do edital preenchido`, body: `Após ${activeDays} dias, acelere os checks na Matriz do Edital.`, action: null });
+  }
+  return insights.sort((a,b) => b.priority - a.priority).slice(0, 3);
+}
+
+function InsightsPanel({ shared, objState, discState }) {
+  const [dismissed, setDismissed] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('toga_insights_dismissed') || '[]'); } catch { return []; }
+  });
+  const all = computeInsights(shared, objState, discState);
+  const visible = all.filter(i => !dismissed.includes(i.id));
+  const dismiss = (id) => {
+    const next = [...dismissed, id];
+    setDismissed(next);
+    try { localStorage.setItem('toga_insights_dismissed', JSON.stringify(next)); } catch {}
+  };
+  const todayISO = new Date().toISOString().slice(0,10);
+  const lastReset = localStorage.getItem('toga_insights_reset_date');
+  if (lastReset !== todayISO) {
+    localStorage.setItem('toga_insights_reset_date', todayISO);
+    setDismissed([]);
+    return null;
+  }
+  if (visible.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 4 }}>
+      <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--text-muted)', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>
+        INSIGHTS · {visible.length} HOJE
+      </div>
+      {visible.map(ins => (
+        <div key={ins.id} className="glass" style={{ padding: '12px 14px', borderLeft: `3px solid ${ins.color}`, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ fontSize: 20, flexShrink: 0, lineHeight: 1, marginTop: 1 }}>{ins.icon}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: ins.color, marginBottom: 3 }}>{ins.title}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4 }}>{ins.body}</div>
+          </div>
+          <button onClick={() => dismiss(ins.id)} className="btn-ghost" style={{ flexShrink: 0, padding: '4px 8px', fontSize: 11, alignSelf: 'flex-start', opacity: 0.6 }}>✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+window.InsightsPanel = InsightsPanel;
+</script>
+<script type="text/babel" src="license-gate.jsx"></script>
+<script type="text/babel" src="onboarding.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
