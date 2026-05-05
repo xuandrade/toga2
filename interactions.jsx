@@ -44,7 +44,7 @@ const STUDY_TYPES_POM = [
   'Revisão', 'Mapa mental', 'Aula', 'Simulado',
 ];
 
-function PomodoroModal({ open, onClose, subjects, onCompleteSession }) {
+function PomodoroModal({ open, onClose, subjects, onCompleteSession, customStudyTypes = [], onAddCustomStudyType }) {
   const [phase, setPhase] = React.useState('pick');     // pick | running | done
   const [mode, setMode]   = React.useState('timer');    // timer | chrono
   const [mins, setMins]   = React.useState(45);
@@ -61,25 +61,38 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession }) {
 
   const totalSecs = mins * 60;
 
-  // Timer (countdown) tick
-  React.useEffect(() => {
-    if (phase !== 'running' || paused || mode !== 'timer') return;
-    if (secsLeft <= 0) {
-      setDoneMins(mins);
-      setPhase('done');
-      window.celebrateVictory && window.celebrateVictory();
-      return;
-    }
-    const t = setTimeout(() => setSecsLeft(s => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [phase, paused, secsLeft, mode]);
+  // Wall-clock anchored ticking — avoids setTimeout drift, survives tab throttling.
+  const startAtRef = React.useRef(null);   // ms timestamp of current run-segment start
+  const accumMsRef = React.useRef(0);      // accumulated ms across pauses
 
-  // Chronometer (count-up) tick
   React.useEffect(() => {
-    if (phase !== 'running' || paused || mode !== 'chrono') return;
-    const t = setTimeout(() => setSecsElapsed(s => s + 1), 1000);
-    return () => clearTimeout(t);
-  }, [phase, paused, secsElapsed, mode]);
+    if (phase !== 'running' || paused) return;
+    startAtRef.current = Date.now();
+    const tick = () => {
+      const elapsedMs = accumMsRef.current + (Date.now() - startAtRef.current);
+      const elapsedSec = Math.floor(elapsedMs / 1000);
+      if (mode === 'timer') {
+        const left = totalSecs - elapsedSec;
+        if (left <= 0) {
+          setSecsLeft(0);
+          accumMsRef.current = totalSecs * 1000;
+          setDoneMins(mins);
+          setPhase('done');
+          window.celebrateVictory && window.celebrateVictory();
+        } else {
+          setSecsLeft(left);
+        }
+      } else {
+        setSecsElapsed(elapsedSec);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => {
+      accumMsRef.current += Date.now() - startAtRef.current;
+      clearInterval(id);
+    };
+  }, [phase, paused, mode, totalSecs, mins]);
 
   React.useEffect(() => {
     if (open) {
@@ -88,6 +101,8 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession }) {
       setSecsLeft(mins * 60);
       setSecsElapsed(0);
       setPaused(false);
+      accumMsRef.current = 0;
+      startAtRef.current = null;
       const firstSubj = subjects[0];
       setSubjectId(firstSubj?.id || '');
       setDoneDiscipline(firstSubj?.name || '');
@@ -97,6 +112,8 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession }) {
   }, [open]);
 
   const start = () => {
+    accumMsRef.current = 0;
+    startAtRef.current = null;
     if (mode === 'timer') setSecsLeft(mins * 60);
     if (mode === 'chrono') setSecsElapsed(0);
     setPaused(false);
@@ -106,12 +123,23 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession }) {
   };
 
   const finalize = () => {
-    // Move to "done" with what was actually studied
+    const elapsedMs = accumMsRef.current + (startAtRef.current && !paused ? (Date.now() - startAtRef.current) : 0);
+    const elapsedSecs = Math.floor(elapsedMs / 1000);
     const elapsedMins = mode === 'timer'
-      ? Math.max(1, Math.round((mins * 60 - secsLeft) / 60))
-      : Math.max(1, Math.round(secsElapsed / 60));
+      ? Math.max(1, Math.round(Math.min(mins * 60, elapsedSecs) / 60))
+      : Math.max(1, Math.round(elapsedSecs / 60));
     setDoneMins(elapsedMins);
     setPhase('done');
+  };
+
+  const allStudyTypes = [...STUDY_TYPES_POM, ...customStudyTypes];
+  const handleAddCustom = () => {
+    const name = window.prompt('Novo tipo de estudo:');
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (!allStudyTypes.includes(trimmed) && onAddCustomStudyType) onAddCustomStudyType(trimmed);
+    setDoneStudyType(trimmed);
   };
 
   const saveAndClose = () => {
@@ -274,7 +302,7 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession }) {
               <div>
                 <label style={labelStyle}>Tipo de estudo</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {STUDY_TYPES_POM.map(t => (
+                  {allStudyTypes.map(t => (
                     <button key={t} onClick={() => setDoneStudyType(doneStudyType === t ? '' : t)}
                       className={doneStudyType === t ? 'btn-neon' : 'btn-ghost'}
                       style={{ fontSize: 11, padding: '4px 10px',
@@ -282,6 +310,10 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession }) {
                       {t}
                     </button>
                   ))}
+                  <button onClick={handleAddCustom} className="btn-ghost"
+                    style={{ fontSize: 11, padding: '4px 10px', borderStyle: 'dashed' }}>
+                    + Outro
+                  </button>
                 </div>
               </div>
 
