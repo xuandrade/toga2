@@ -1,6 +1,6 @@
 // TOGA — Aba Histórico (lista de sessões agrupadas por dia)
 
-function HistoricoTab({ shared }) {
+function HistoricoTab({ shared, onEditEntry, onDeleteEntry }) {
   const logs = shared.dailyLogs || [];
 
   // Order from most recent to oldest
@@ -67,6 +67,13 @@ function HistoricoTab({ shared }) {
               {entries.map((e, i) => {
                 const hasAcc = (e.correct || 0) + (e.wrong || 0) > 0;
                 const accPct = hasAcc ? Math.round(((e.correct || 0) / ((e.correct || 0) + (e.wrong || 0))) * 100) : null;
+                const handleDel = () => {
+                  if (!onDeleteEntry) return;
+                  if (window.confirm('Excluir este registro? Esta ação não pode ser desfeita.')) {
+                    onDeleteEntry(day.date, i);
+                  }
+                };
+                const handleEdit = () => onEditEntry && onEditEntry(day.date, i, e);
                 return (
                   <div key={i} style={{
                     padding: '10px 12px',
@@ -101,7 +108,7 @@ function HistoricoTab({ shared }) {
                           <span style={{ fontSize: 11, color: 'var(--tinta)' }}>🛡</span>
                         )}
                       </div>
-                      <div style={{ display: 'flex', gap: 10, fontSize: 11, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 11, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, alignItems: 'center' }}>
                         {(e.hours || 0) > 0 && <span style={{ color: 'var(--ciano)' }}>{fmtHours(e.hours)}</span>}
                         {(e.questions || 0) > 0 && <span style={{ color: 'var(--esmeralda)' }}>{e.questions}q</span>}
                         {accPct !== null && (
@@ -110,6 +117,18 @@ function HistoricoTab({ shared }) {
                           </span>
                         )}
                         {(e.reviews || 0) > 0 && <span style={{ color: 'var(--tinta)' }}>{e.reviews}r</span>}
+                        {onEditEntry && (
+                          <button onClick={handleEdit} title="Editar"
+                            style={{ background: 'transparent', border: '1px solid rgba(42,45,58,0.15)', borderRadius: 6, padding: '2px 7px', cursor: 'pointer', fontSize: 11, color: 'var(--petroleo)' }}>
+                            ✎
+                          </button>
+                        )}
+                        {onDeleteEntry && (
+                          <button onClick={handleDel} title="Excluir"
+                            style={{ background: 'transparent', border: '1px solid rgba(232,93,93,0.3)', borderRadius: 6, padding: '2px 7px', cursor: 'pointer', fontSize: 11, color: 'var(--coral)' }}>
+                            🗑
+                          </button>
+                        )}
                       </div>
                     </div>
                     {e.note && (

@@ -456,6 +456,91 @@ function App() {
     window.celebrateLight && window.celebrateLight();
   };
 
+  const recomputeDayTotals = (day) => {
+    const entries = day.entries || [];
+    const sum = (k) => entries.reduce((a, e) => a + (Number(e[k]) || 0), 0);
+    const last = entries[entries.length - 1] || {};
+    return {
+      ...day,
+      hours: Math.round(sum('hours') * 100) / 100,
+      questions: sum('questions'),
+      correct: sum('correct'),
+      wrong: sum('wrong'),
+      reviews: sum('reviews'),
+      discipline: last.discipline || day.discipline,
+      studyType: last.studyType || day.studyType,
+      entries,
+    };
+  };
+
+  const ensureEntries = (day) => {
+    if (day.entries && day.entries.length > 0) return day;
+    const { entries: _drop, ...rest } = day;
+    return { ...day, entries: [{ ...rest }] };
+  };
+
+  const [editTarget, setEditTarget] = useState(null); // { date, idx, entry }
+
+  const handleDeleteEntry = (date, idx) => {
+    setShared(s => {
+      const logs = (s.dailyLogs || []).map(d => d.date === date ? ensureEntries(d) : d);
+      const i = logs.findIndex(d => d.date === date);
+      if (i < 0) return s;
+      const day = logs[i];
+      const newEntries = day.entries.filter((_, k) => k !== idx);
+      let newLogs;
+      if (newEntries.length === 0) {
+        newLogs = logs.filter(d => d.date !== date);
+      } else {
+        newLogs = [...logs];
+        newLogs[i] = recomputeDayTotals({ ...day, entries: newEntries });
+      }
+      return { ...s, dailyLogs: newLogs, streak: calcStreak(newLogs) };
+    });
+  };
+
+  const handleUpdateEntry = (date, idx, updated) => {
+    setShared(s => {
+      let logs = (s.dailyLogs || []).map(d => d.date === date ? ensureEntries(d) : d);
+      const i = logs.findIndex(d => d.date === date);
+      if (i < 0) return s;
+      const day = logs[i];
+      const newEntry = { ...day.entries[idx], ...updated };
+      const newDate = updated.date || date;
+
+      if (newDate === date) {
+        const newEntries = day.entries.map((e, k) => k === idx ? newEntry : e);
+        const newLogs = [...logs];
+        newLogs[i] = recomputeDayTotals({ ...day, entries: newEntries });
+        return { ...s, dailyLogs: newLogs, streak: calcStreak(newLogs) };
+      }
+
+      // Date changed: remove from old day, add to new day.
+      const oldEntries = day.entries.filter((_, k) => k !== idx);
+      let working = [...logs];
+      if (oldEntries.length === 0) working = working.filter(d => d.date !== date);
+      else working[i] = recomputeDayTotals({ ...day, entries: oldEntries });
+
+      const targetIdx = working.findIndex(d => d.date === newDate);
+      if (targetIdx >= 0) {
+        const target = ensureEntries(working[targetIdx]);
+        working[targetIdx] = recomputeDayTotals({ ...target, entries: [...target.entries, { ...newEntry, date: newDate }] });
+      } else {
+        working.push(recomputeDayTotals({ date: newDate, entries: [{ ...newEntry, date: newDate }] }));
+        working.sort((a, b) => a.date.localeCompare(b.date));
+      }
+      return { ...s, dailyLogs: working, streak: calcStreak(working) };
+    });
+  };
+
+  const handleAddCustomStudyType = (name) => {
+    setShared(s => {
+      const list = s.customStudyTypes || [];
+      if (list.includes(name)) return s;
+      return { ...s, customStudyTypes: [...list, name] };
+    });
+  };
+
   const handleSession = ({ minutes, subjectId, discipline, studyType, note }) => {
     const today = new Date().toISOString().slice(0,10);
     const hours = minutes / 60;
@@ -493,6 +578,13 @@ function App() {
   if (showSplash) return <SplashScreen onEnter={() => { setShowSplash(false); setTweaks('showSplash', false); }} />;
 
   const activeSubjects = mode === 'objetiva' ? objState.subjects : discState.subjects;
+  const combinedSubjects = React.useMemo(() => {
+    const seen = new Map();
+    [...objState.subjects, ...discState.subjects].forEach(s => {
+      if (s && s.name && !seen.has(s.name)) seen.set(s.name, s);
+    });
+    return Array.from(seen.values());
+  }, [objState.subjects, discState.subjects]);
   const totalStats = mode === 'objetiva' ? window.DA.getTotalStatsObj(objState.subjects) : window.DA.getTotalStatsDisc(discState.subjects);
   const isSick = shared.petHealth === 'sick';
 
@@ -613,7 +705,13 @@ function App() {
         )}
 
         {/* ── ABA: HISTÓRICO ── */}
-        {activeTab === 'historico' && <HistoricoTab shared={shared} />}
+        {activeTab === 'historico' && (
+          <HistoricoTab
+            shared={shared}
+            onDeleteEntry={handleDeleteEntry}
+            onEditEntry={(date, idx, entry) => setEditTarget({ date, idx, entry })}
+          />
+        )}
 
         {/* ── ABA: EDITAL ── */}
         {activeTab === 'edital' && (
@@ -687,9 +785,21 @@ function App() {
       </main>
 
       <QuickLogFAB onOpenSessionLog={() => setSessionLogOpen(true)} onOpenPomodoro={() => setPomodoroOpen(true)} />
-      <SessionLogModal open={sessionLogOpen} subjects={objState.subjects} onSave={handleEnrichedLog} onClose={() => setSessionLogOpen(false)} />
+      <SessionLogModal open={sessionLogOpen} subjects={combinedSubjects} onSave={handleEnrichedLog}
+        onClose={() => setSessionLogOpen(false)}
+        customStudyTypes={shared.customStudyTypes || []}
+        onAddCustomStudyType={handleAddCustomStudyType} />
+      <SessionLogModal open={!!editTarget} subjects={combinedSubjects}
+        initial={editTarget?.entry}
+        customStudyTypes={shared.customStudyTypes || []}
+        onAddCustomStudyType={handleAddCustomStudyType}
+        onSave={(updated) => { if (editTarget) handleUpdateEntry(editTarget.date, editTarget.idx, updated); }}
+        onClose={() => setEditTarget(null)} />
       <PomodoroModal open={pomodoroOpen} onClose={() => setPomodoroOpen(false)}
-        subjects={activeSubjects.length ? activeSubjects : objState.subjects} onCompleteSession={handleSession} />
+        subjects={combinedSubjects.length ? combinedSubjects : objState.subjects}
+        customStudyTypes={shared.customStudyTypes || []}
+        onAddCustomStudyType={handleAddCustomStudyType}
+        onCompleteSession={handleSession} />
       <GoalsModal open={goalsOpen} goals={shared.goals} onSave={handleSaveGoals} onClose={() => setGoalsOpen(false)} />
 
       {showOnboarding && <OnboardingModal onDone={() => setShowOnboarding(false)} />}

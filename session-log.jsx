@@ -6,7 +6,7 @@ const STUDY_TYPES = [
   'Revisão', 'Mapa mental', 'Aula', 'Simulado',
 ];
 
-function SessionLogModal({ open, subjects, onSave, onClose }) {
+function SessionLogModal({ open, subjects, onSave, onClose, customStudyTypes = [], onAddCustomStudyType, initial = null }) {
   const { useState: useSt, useEffect: useEff, useRef: useR } = React;
 
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -25,7 +25,35 @@ function SessionLogModal({ open, subjects, onSave, onClose }) {
     note: '',
   };
 
+  const fromInitial = (e) => {
+    if (!e) return empty;
+    const totalMin = Math.round((e.hours || 0) * 60);
+    return {
+      date: e.date || todayISO,
+      discipline: e.discipline || '',
+      topic: e.topic || '',
+      studyType: e.studyType || '',
+      hours: String(Math.floor(totalMin / 60) || ''),
+      minutes: String(totalMin % 60 || ''),
+      questions: e.questions ? String(e.questions) : '',
+      correct: e.correct ? String(e.correct) : '',
+      wrong: e.wrong ? String(e.wrong) : '',
+      reviews: e.reviews ? String(e.reviews) : '',
+      note: e.note || '',
+    };
+  };
+
   const [form, setForm] = useSt(empty);
+  const isEdit = !!initial;
+  const allStudyTypes = [...STUDY_TYPES, ...customStudyTypes];
+  const handleAddCustom = () => {
+    const name = window.prompt('Novo tipo de estudo:');
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (!allStudyTypes.includes(trimmed) && onAddCustomStudyType) onAddCustomStudyType(trimmed);
+    setForm(f => ({ ...f, studyType: trimmed }));
+  };
 
   // Chronometer state
   const [chronoOpen, setChronoOpen]       = useSt(false);
@@ -35,12 +63,12 @@ function SessionLogModal({ open, subjects, onSave, onClose }) {
 
   useEff(() => {
     if (open) {
-      setForm(empty);
+      setForm(fromInitial(initial));
       setChronoOpen(false);
       setChronoRunning(false);
       setChronoSecs(0);
     }
-  }, [open]);
+  }, [open, initial]);
 
   // Chronometer tick
   useEff(() => {
@@ -124,8 +152,8 @@ function SessionLogModal({ open, subjects, onSave, onClose }) {
         <button onClick={onClose} className="btn-ghost" style={{ position: 'absolute', top: 12, right: 12, padding: '4px 8px' }}>✕</button>
 
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 10, letterSpacing: '0.25em', color: 'var(--ciano)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>REGISTRAR SESSÃO DE ESTUDOS</div>
-          <div className="font-display" style={{ fontSize: 20, fontWeight: 700, marginTop: 3 }}>O que você estudou?</div>
+          <div style={{ fontSize: 10, letterSpacing: '0.25em', color: 'var(--ciano)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>{isEdit ? 'EDITAR SESSÃO DE ESTUDOS' : 'REGISTRAR SESSÃO DE ESTUDOS'}</div>
+          <div className="font-display" style={{ fontSize: 20, fontWeight: 700, marginTop: 3 }}>{isEdit ? 'Atualize os dados' : 'O que você estudou?'}</div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -160,7 +188,7 @@ function SessionLogModal({ open, subjects, onSave, onClose }) {
           <div>
             <label style={labelStyle}>Tipo de estudo</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {STUDY_TYPES.map(t => (
+              {allStudyTypes.map(t => (
                 <button key={t} onClick={() => set('studyType', form.studyType === t ? '' : t)}
                   className={form.studyType === t ? 'btn-neon' : 'btn-ghost'}
                   style={{ fontSize: 12, padding: '5px 12px',
@@ -168,6 +196,10 @@ function SessionLogModal({ open, subjects, onSave, onClose }) {
                   {t}
                 </button>
               ))}
+              <button onClick={handleAddCustom} className="btn-ghost"
+                style={{ fontSize: 12, padding: '5px 12px', borderStyle: 'dashed' }}>
+                + Outro
+              </button>
             </div>
           </div>
 
@@ -283,9 +315,11 @@ function SessionLogModal({ open, subjects, onSave, onClose }) {
           background: 'linear-gradient(135deg, var(--petroleo), var(--ciano))',
           borderColor: 'transparent', color: 'white',
         }}>
-          Salvar sessão
+          {isEdit ? 'Salvar alterações' : 'Salvar sessão'}
         </button>
       </div>
     </div>
   );
 }
+
+window.SessionLogModal = SessionLogModal;
