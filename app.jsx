@@ -737,6 +737,10 @@ function App() {
               <MetricsRow shared={shared} setShared={setShared} />
             </section>
 
+            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '90ms' }}>
+              <AccuracyOverallCard shared={shared} />
+            </section>
+
             <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '100ms' }}>
               <TotalsSection shared={shared} objState={objState} discState={discState} />
             </section>
@@ -775,8 +779,8 @@ function App() {
                 </div>
               </div>
               {mode === 'objetiva'
-                ? <SyllabusMatrixObjetiva state={objState} setState={setObjState} onMaster={handleMaster} onCheckXp={handleCheckXp} />
-                : <SyllabusMatrixDiscursiva state={discState} setState={setDiscState} onCheckXp={handleCheckXp} />}
+                ? <SyllabusMatrixObjetiva state={objState} setState={setObjState} onMaster={handleMaster} onCheckXp={handleCheckXp} dailyLogs={shared.dailyLogs} />
+                : <SyllabusMatrixDiscursiva state={discState} setState={setDiscState} onCheckXp={handleCheckXp} dailyLogs={shared.dailyLogs} />}
             </section>
             {activeSubjects.length > 0 && (
               <section style={{ marginBottom: 16 }}>

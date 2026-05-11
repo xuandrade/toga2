@@ -60,16 +60,10 @@ const removeTopic = (sId, tId) => setState(s => ({
 }));
 const addSubject = () => setState(s => ({
 ...s, subjects: [...s.subjects, {
-id: `sd-${Date.now()}`, name: 'Nova disciplina', weight: 3, topics: [], simulados: [],
+id: `sd-${Date.now()}`, name: 'Nova disciplina', weight: 3, topics: [],
 }],
 }));
 const removeSubject = (sId) => setState(s => ({ ...s, subjects: s.subjects.filter(sub => sub.id !== sId) }));
-const addSimulado = (sId, sim) => setState(s => ({
-...s, subjects: s.subjects.map(sub => sub.id !== sId ? sub : { ...sub, simulados: [...(sub.simulados || []), sim] }),
-}));
-const removeSimulado = (sId, simIdx) => setState(s => ({
-...s, subjects: s.subjects.map(sub => sub.id !== sId ? sub : { ...sub, simulados: (sub.simulados || []).filter((_, i) => i !== simIdx) }),
-}));
 
 if (state.subjects.length === 0) {
 return (
@@ -97,9 +91,7 @@ return (
 <SubjectCardDisc key={s.id} subject={s} idx={si}
 onToggle={toggle} onRename={renameSubject} onSetWeight={setWeight}
 onRenameTopic={renameTopic} onAddTopic={addTopic} onRemoveTopic={removeTopic}
-onRemoveSubject={removeSubject}
-onAddSimulado={(sim) => addSimulado(s.id, sim)}
-onRemoveSimulado={(idx) => removeSimulado(s.id, idx)} />
+onRemoveSubject={removeSubject} />
 ))}
 <button className="btn-neon" style={{
 justifySelf: 'start',
@@ -112,13 +104,9 @@ borderColor: 'rgba(232,93,93,0.4)', color: '#a82360',
 );
 }
 
-function SubjectCardDisc({ subject, onToggle, onRename, onSetWeight, onRenameTopic, onAddTopic, onRemoveTopic, onRemoveSubject, onAddSimulado, onRemoveSimulado }) {
+function SubjectCardDisc({ subject, onToggle, onRename, onSetWeight, onRenameTopic, onAddTopic, onRemoveTopic, onRemoveSubject }) {
 const [open, setOpen] = React.useState(true);
-const [tab, setTab] = React.useState('temas');
 const completion = window.DA.getSubjectCompletionDisc(subject);
-const sims = subject.simulados || [];
-const lastSim = sims[sims.length - 1];
-const avg = sims.length ? sims.reduce((a, s) => a + s.score, 0) / sims.length : 0;
 
 return (
 <div className="glass" style={{ overflow: 'hidden' }}>
@@ -144,14 +132,6 @@ onChange={e => onRename(subject.id, e.target.value)} />
 </div>
 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 12 }}>
 <span>{subject.topics.length} temas</span>
-{sims.length > 0 && (
-<>
-<span>·</span>
-<span>Último: <span className="num text-orange" style={{ fontWeight: 600 }}>{lastSim.score}%</span></span>
-<span>·</span>
-<span>Média: <span className="num" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{avg.toFixed(1)}%</span></span>
-</>
-)}
 </div>
 </div>
 <button className="btn-ghost" onClick={e => { e.stopPropagation(); onRemoveSubject(subject.id); }} style={{ padding: 4 }}><I.close size={12} /></button>
@@ -163,27 +143,7 @@ onChange={e => onRename(subject.id, e.target.value)} />
 
   {open && (
     <div style={{ borderTop: '1px solid rgba(12,13,18,0.04)' }}>
-      {/* Tab strip */}
-      <div style={{ display: 'flex', gap: 0, padding: '0 18px', borderBottom: '1px solid rgba(12,13,18,0.04)' }}>
-        {[
-          { k: 'temas', label: 'Temas', icon: <I.book size={12} /> },
-          { k: 'simulados', label: `Simulados (${sims.length})`, icon: <I.target size={12} /> },
-        ].map(t => (
-          <button key={t.k} onClick={() => setTab(t.k)}
-            style={{
-              padding: '10px 14px', border: 'none', background: 'transparent',
-              borderBottom: `2px solid ${tab === t.k ? 'var(--coral)' : 'transparent'}`,
-              color: tab === t.k ? '#8B2020' : 'var(--text-muted)',
-              fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6,
-              marginBottom: -1,
-            }}>
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'temas' && (
+      {(
         <div style={{ padding: '6px 18px 14px' }}>
           <div className="topic-row-disc header-row" style={{ padding: '10px 0', borderBottom: '1px solid rgba(12,13,18,0.04)' }}>
             <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>TEMA</div>
@@ -228,9 +188,6 @@ onChange={e => onRename(subject.id, e.target.value)} />
         </div>
       )}
 
-      {tab === 'simulados' && (
-        <SimuladosPanel sims={sims} onAdd={onAddSimulado} onRemove={onRemoveSimulado} />
-      )}
     </div>
   )}
 </div>

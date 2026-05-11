@@ -349,6 +349,44 @@ function StatsPage({ shared, objState, discState }) {
       {/* Activity curve — full-width with hover tooltip */}
       <ActivityCurve logs={logs} />
 
+      {/* Row: Comparação semanal | Constância % | Edital Obj + Disc */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+
+        {/* Comparação semanal */}
+        <div className="glass" style={{ padding: 16 }}>
+          <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 12, fontFamily: 'JetBrains Mono, monospace' }}>COMPARAÇÃO SEMANAL</div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 8 }}>
+            {[['Esta semana', thisWeek, 'var(--petroleo)'], ['Semana passada', lastWeek, 'var(--ardosia)']].map(([label, h, color]) => {
+              const maxW = Math.max(thisWeek, lastWeek, 0.1);
+              return (
+                <div key={label} style={{ flex: 1 }}>
+                  <div style={{ background: 'rgba(42,45,58,0.06)', borderRadius: 8, height: 80, display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: `${(h/maxW)*100}%`, background: color, borderRadius: '8px 8px 0 0', minHeight: h > 0 ? 4 : 0, transition: 'height 600ms ease' }} />
+                  </div>
+                  <div className="num" style={{ fontSize: 18, fontWeight: 700, color, marginTop: 6 }}>{h.toFixed(1)}h</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
+                </div>
+              );
+            })}
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              {thisWeek > lastWeek
+                ? <div><div style={{ fontSize: 28 }}>📈</div><div style={{ fontSize: 11, color: 'var(--esmeralda)', fontWeight: 700 }}>+{((thisWeek-lastWeek)/Math.max(lastWeek,0.1)*100).toFixed(0)}%</div></div>
+                : thisWeek < lastWeek
+                ? <div><div style={{ fontSize: 28 }}>📉</div><div style={{ fontSize: 11, color: 'var(--coral)', fontWeight: 700 }}>{((thisWeek-lastWeek)/Math.max(lastWeek,0.1)*100).toFixed(0)}%</div></div>
+                : <div style={{ fontSize: 28 }}>😐</div>
+              }
+            </div>
+          </div>
+        </div>
+
+        {/* % de Constância */}
+        <ConstanciaPercentCard logs={logs} bestStreak={shared.bestStreak} />
+
+        {/* % Edital — Objetiva vs Discursiva (independente) */}
+        <EditalIndependenteCard objState={objState} discState={discState} />
+
+      </div>
+
       {/* Charts grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
 
@@ -447,33 +485,104 @@ function StatsPage({ shared, objState, discState }) {
           }
         </div>
 
-        {/* Chart 8 — Comparação semanal */}
-        <div className="glass" style={{ padding: 16 }}>
-          <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 12, fontFamily: 'JetBrains Mono, monospace' }}>COMPARAÇÃO SEMANAL</div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 8 }}>
-            {[['Esta semana', thisWeek, 'var(--petroleo)'], ['Semana passada', lastWeek, 'var(--ardosia)']].map(([label, h, color]) => {
-              const maxW = Math.max(thisWeek, lastWeek, 0.1);
-              return (
-                <div key={label} style={{ flex: 1 }}>
-                  <div style={{ background: 'rgba(42,45,58,0.06)', borderRadius: 8, height: 80, display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
-                    <div style={{ width: '100%', height: `${(h/maxW)*100}%`, background: color, borderRadius: '8px 8px 0 0', minHeight: h > 0 ? 4 : 0, transition: 'height 600ms ease' }} />
-                  </div>
-                  <div className="num" style={{ fontSize: 18, fontWeight: 700, color, marginTop: 6 }}>{h.toFixed(1)}h</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
-                </div>
-              );
-            })}
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              {thisWeek > lastWeek
-                ? <div><div style={{ fontSize: 28 }}>📈</div><div style={{ fontSize: 11, color: 'var(--esmeralda)', fontWeight: 700 }}>+{((thisWeek-lastWeek)/Math.max(lastWeek,0.1)*100).toFixed(0)}%</div></div>
-                : thisWeek < lastWeek
-                ? <div><div style={{ fontSize: 28 }}>📉</div><div style={{ fontSize: 11, color: 'var(--coral)', fontWeight: 700 }}>{((thisWeek-lastWeek)/Math.max(lastWeek,0.1)*100).toFixed(0)}%</div></div>
-                : <div style={{ fontSize: 28 }}>😐</div>
-              }
+      </div>
+    </div>
+  );
+}
+
+// ── Constância % card ──
+function ConstanciaPercentCard({ logs, bestStreak }) {
+  const startISO = (window.DA && window.DA.firstLogDate) ? window.DA.firstLogDate(logs || []) : null;
+  let weekdaysTotal = 0;
+  let weekdaysStudied = 0;
+  if (startISO) {
+    const start = new Date(startISO + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const logMap = new Map((logs || []).map(l => [l.date, l]));
+    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+      const dow = d.getDay();
+      if (dow === 0 || dow === 6) continue;
+      weekdaysTotal++;
+      const log = logMap.get(d.toISOString().slice(0,10));
+      if (log && (log.hours || 0) >= 0.5) weekdaysStudied++;
+    }
+  }
+  const pct = weekdaysTotal > 0 ? (weekdaysStudied / weekdaysTotal) * 100 : 0;
+  const currentStreak = (window.DA && window.DA.calcConstancia) ? window.DA.calcConstancia(logs || []) : 0;
+  const record = Math.max(bestStreak || 0, (window.DA && window.DA.calcConstanciaRecord) ? window.DA.calcConstanciaRecord(logs || []) : 0, currentStreak);
+  const tier = pct >= 90 ? 'var(--esmeralda)' : pct >= 70 ? '#00b8d4' : pct >= 50 ? 'var(--ambar)' : 'var(--coral)';
+  return (
+    <div className="glass" style={{ padding: 16 }}>
+      <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 12, fontFamily: 'JetBrains Mono, monospace' }}>% DE CONSTÂNCIA</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ position: 'relative', width: 90, height: 90, flexShrink: 0 }}>
+          <svg viewBox="0 0 100 100" width={90} height={90} style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(30,32,48,0.08)" strokeWidth="9" />
+            <circle cx="50" cy="50" r="40" fill="none" stroke={tier} strokeWidth="9"
+              strokeDasharray={`${(pct/100)*251.3} 251.3`} strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 6px ${tier}66)`, transition: 'stroke-dasharray 700ms cubic-bezier(0.16,1,0.3,1)' }} />
+          </svg>
+          <div className="num" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 20, fontWeight: 800, color: tier, letterSpacing: '-0.02em' }}>
+            {pct.toFixed(0)}<span style={{ fontSize: 10, opacity: 0.7 }}>%</span>
+          </div>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 700, marginBottom: 6 }}>
+            {weekdaysStudied} de {weekdaysTotal} dias úteis
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--text-muted)' }}>Atual</span>
+              <span className="num" style={{ color: 'var(--esmeralda)', fontWeight: 700 }}>🔥 {currentStreak}d</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--text-muted)' }}>Recorde</span>
+              <span className="num" style={{ color: 'var(--dourado)', fontWeight: 700 }}>🏆 {record}d</span>
             </div>
           </div>
         </div>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 10, lineHeight: 1.4 }}>
+        Fins de semana não contam — só dias úteis a partir do primeiro registro.
+      </div>
+    </div>
+  );
+}
 
+// ── Cumprimento independente: Objetiva vs Discursiva ──
+function EditalIndependenteCard({ objState, discState }) {
+  const obj = window.DA.getTotalStatsObj(objState.subjects || []);
+  const disc = window.DA.getTotalStatsDisc(discState.subjects || []);
+  const rows = [
+    { label: 'Objetiva',    pct: obj.percentage,  done: obj.checks,  total: obj.total,  color: 'var(--ciano)',    glow: '0 0 6px rgba(0,217,255,0.5)' },
+    { label: 'Discursiva',  pct: disc.percentage, done: disc.checks, total: disc.total, color: 'var(--coral)',    glow: '0 0 6px rgba(255,112,112,0.5)' },
+  ];
+  return (
+    <div className="glass" style={{ padding: 16 }}>
+      <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 12, fontFamily: 'JetBrains Mono, monospace' }}>EDITAL · OBJETIVA × DISCURSIVA</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {rows.map(r => (
+          <div key={r.label}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12, marginBottom: 5 }}>
+              <span style={{ fontWeight: 700, color: r.color }}>{r.label}</span>
+              <span className="num" style={{ fontWeight: 800, color: r.color, filter: `drop-shadow(${r.glow})` }}>
+                {r.pct.toFixed(0)}%
+              </span>
+            </div>
+            <div style={{ height: 8, background: 'rgba(30,32,48,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${Math.min(100, r.pct)}%`,
+                background: `linear-gradient(90deg, ${r.color}aa, ${r.color})`,
+                borderRadius: 99,
+                boxShadow: r.glow,
+                transition: 'width 700ms cubic-bezier(0.16,1,0.3,1)',
+              }} />
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 3, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+              {r.done}/{r.total} checks
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
