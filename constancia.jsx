@@ -6,15 +6,20 @@ const CONSTANCIA_THRESHOLD_H = (window.DA && window.DA.CONSTANCIA_HOURS_MIN) || 
 
 function calcConstanciaStreak(logs) {
   if (window.DA && window.DA.calcConstancia) return window.DA.calcConstancia(logs);
-  // Fallback (matches data.jsx logic)
+  // Fallback: weekends auto-fulfilled, stop at pre-start days
+  const active = (logs || []).filter(l => (l.hours||0)+(l.questions||0)+(l.reviews||0) > 0);
+  const firstISO = active.length ? active.map(l => l.date).sort()[0] : null;
+  if (!firstISO) return 0;
   const today = new Date(); today.setHours(0,0,0,0);
   const logMap = new Map((logs || []).map(l => [l.date, l]));
   let streak = 0;
   for (let i = 0; i < 365; i++) {
     const d = new Date(today); d.setDate(today.getDate() - i);
+    const iso = d.toISOString().slice(0,10);
+    if (iso < firstISO) break;
     const dow = d.getDay();
-    if (dow === 0 || dow === 6) continue;
-    const log = logMap.get(d.toISOString().slice(0,10));
+    if (dow === 0 || dow === 6) { streak++; continue; }
+    const log = logMap.get(iso);
     const hours = log ? (log.hours || 0) : 0;
     if (hours >= CONSTANCIA_THRESHOLD_H) streak++;
     else { if (i === 0) continue; break; }
@@ -59,7 +64,7 @@ function ConstanciaTracker({ logs, bestStreak }) {
     let state;
     if (isFuture) state = 'future';
     else if (beforeStart && !isToday) state = 'empty';
-    else if (isWeekend) state = hours >= CONSTANCIA_THRESHOLD_H ? 'studied' : 'weekend';
+    else if (isWeekend) state = 'studied'; // weekends always fulfilled
     else if (hours >= CONSTANCIA_THRESHOLD_H) state = 'studied';
     else if (i === 0 && hours === 0) state = 'today-empty';
     else state = 'missed';
@@ -114,12 +119,6 @@ function ConstanciaTracker({ logs, bestStreak }) {
         border: 'rgba(232,93,93,0.38)',
         glow: null,
         dot: '✕', dotColor: 'rgba(232,93,93,0.75)'
-      };
-      case 'weekend': return {
-        bg: 'linear-gradient(160deg, rgba(0,168,107,0.10) 0%, rgba(0,168,107,0.15) 100%)',
-        border: 'rgba(0,168,107,0.22)',
-        glow: null,
-        dot: '·', dotColor: 'rgba(0,168,107,0.6)'
       };
       case 'today-empty': return {
         bg: 'rgba(255,255,255,0.55)',
@@ -229,7 +228,7 @@ function ConstanciaTracker({ logs, bestStreak }) {
                 <div
                   onMouseEnter={() => setHovered(i)}
                   onMouseLeave={() => setHovered(null)}
-                  title={`${b.iso} · ${DAYS_PT[b.dow]} · ${b.hours.toFixed(1)}h${b.questions > 0 ? ` · ${b.questions} questões` : ''}`}
+                  title={`${b.iso} · ${DAYS_PT[b.dow]}${b.isWeekend ? ' · fim de semana (automático)' : ''} · ${b.hours.toFixed(1)}h${b.questions > 0 ? ` · ${b.questions} questões` : ''}`}
                   style={{
                     width: 28, height: b.isToday ? 52 : (b.state === 'studied' ? Math.max(32, Math.min(52, 32 + b.hours * 5)) : 40),
                     borderRadius: 8,
@@ -290,7 +289,6 @@ function ConstanciaTracker({ logs, bestStreak }) {
           { color: 'linear-gradient(135deg, #00C47E, #009960)', label: '2–4h' },
           { color: 'linear-gradient(135deg, #00D48A, #00A86B)', label: '4h+' },
           { color: 'linear-gradient(135deg, rgba(232,93,93,0.18), rgba(200,60,60,0.22))', label: 'Falta', border: 'rgba(232,93,93,0.38)' },
-          { color: 'linear-gradient(135deg, rgba(0,168,107,0.10), rgba(0,168,107,0.15))', label: 'Fim de semana', border: 'rgba(0,168,107,0.22)' },
           { color: 'rgba(255,255,255,0.70)', label: 'Sem registros', border: 'rgba(30,32,48,0.06)' },
         ].map((l, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>

@@ -515,6 +515,7 @@ const INITIAL_SHARED = {
   bestStreak: 0,
   shields: 0,
   dailyLogs: [],
+  simulados: [],
   goals: { dailyHours: 4, weeklyHours: 28, dailyQuestions: 40, weeklyQuestions: 250, dailyFlashcards: 30 },
   xp: 0,
   achievements: [],
@@ -667,14 +668,17 @@ function firstLogDate(dailyLogs) {
 
 function calcConstancia(dailyLogs) {
   const logs = dailyLogs || [];
+  const firstISO = firstLogDate(logs);
+  if (!firstISO) return 0;
   const logMap = new Map(logs.map(l => [l.date, l]));
   const today = new Date(); today.setHours(0, 0, 0, 0);
   let streak = 0;
   for (let i = 0; i < 730; i++) {
     const d = new Date(today); d.setDate(today.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
+    if (iso < firstISO) break;
     const dow = d.getDay();
-    if (dow === 0 || dow === 6) continue; // weekend pass
+    if (dow === 0 || dow === 6) { streak++; continue; } // weekends auto-fulfilled
     const log = logMap.get(iso);
     const hours = log ? (log.hours || 0) : 0;
     if (hours >= CONSTANCIA_HOURS_MIN) {
@@ -698,7 +702,11 @@ function calcConstanciaRecord(dailyLogs) {
   let cur = 0;
   for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
     const dow = d.getDay();
-    if (dow === 0 || dow === 6) continue;
+    if (dow === 0 || dow === 6) { // weekends auto-fulfilled
+      cur++;
+      if (cur > best) best = cur;
+      continue;
+    }
     const iso = d.toISOString().slice(0, 10);
     const log = logMap.get(iso);
     const hours = log ? (log.hours || 0) : 0;
@@ -712,6 +720,44 @@ function calcConstanciaRecord(dailyLogs) {
   return best;
 }
 
+// ── Simulado totals ──
+function simuladoTotals(sim) {
+  const rows = (sim && sim.disciplinas) || [];
+  let questions = 0, correct = 0, wrong = 0;
+  rows.forEach(r => {
+    questions += Number(r.questions) || 0;
+    correct   += Number(r.correct)   || 0;
+    wrong     += Number(r.wrong)     || 0;
+  });
+  const accuracy = questions > 0 ? (correct / questions) * 100 : 0;
+  return { questions, correct, wrong, accuracy };
+}
+
+// XP awarded for a completed simulado
+function simuladoXp(sim) {
+  const t = simuladoTotals(sim);
+  if (t.questions === 0) return 10;
+  return Math.min(120, 10 + t.correct);
+}
+
+// Aggregate accuracy combining dailyLogs and simulados.
+// dailyLogs already store correct/wrong per entry; simulados store per-disciplina.
+function aggregateAcertos(shared) {
+  let correct = 0, wrong = 0;
+  (shared.dailyLogs || []).forEach(l => {
+    const ents = (l.entries && l.entries.length > 0) ? l.entries : [l];
+    ents.forEach(e => { correct += e.correct || 0; wrong += e.wrong || 0; });
+  });
+  (shared.simulados || []).forEach(sim => {
+    const t = simuladoTotals(sim);
+    correct += t.correct;
+    wrong   += t.wrong;
+  });
+  const total = correct + wrong;
+  const pct = total > 0 ? (correct / total) * 100 : 0;
+  return { correct, wrong, total, pct };
+}
+
 window.DA = {
   INITIAL_SHARED, INITIAL_OBJETIVA, INITIAL_DISCURSIVA,
   getSubjectCompletionObj, getSubjectCompletionDisc,
@@ -720,4 +766,5 @@ window.DA = {
   PET_STAGES, getPetStageInfo,
   daysSinceLastStudy, studied2DaysInRow, nextPetHealth,
   CONSTANCIA_HOURS_MIN, firstLogDate, calcConstancia, calcConstanciaRecord,
+  simuladoTotals, simuladoXp, aggregateAcertos,
 };
