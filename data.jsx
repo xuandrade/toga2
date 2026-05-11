@@ -512,6 +512,7 @@ const INITIAL_SUBJECTS_DISC = [
 
 const INITIAL_SHARED = {
   streak: 0,
+  bestStreak: 0,
   shields: 0,
   dailyLogs: [],
   goals: { dailyHours: 4, weeklyHours: 28, dailyQuestions: 40, weeklyQuestions: 250, dailyFlashcards: 30 },
@@ -655,6 +656,62 @@ function nextPetHealth(currentHealth, dailyLogs) {
   return studied2DaysInRow(dailyLogs) ? 'healthy' : 'sick';
 }
 
+// ── Constância (streak with weekend pass) ──
+const CONSTANCIA_HOURS_MIN = 0.5;
+
+function firstLogDate(dailyLogs) {
+  const active = (dailyLogs || []).filter(l => (l.hours || 0) + (l.questions || 0) + (l.reviews || 0) > 0);
+  if (active.length === 0) return null;
+  return active.map(l => l.date).sort()[0];
+}
+
+function calcConstancia(dailyLogs) {
+  const logs = dailyLogs || [];
+  const logMap = new Map(logs.map(l => [l.date, l]));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let streak = 0;
+  for (let i = 0; i < 730; i++) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const iso = d.toISOString().slice(0, 10);
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) continue; // weekend pass
+    const log = logMap.get(iso);
+    const hours = log ? (log.hours || 0) : 0;
+    if (hours >= CONSTANCIA_HOURS_MIN) {
+      streak++;
+    } else {
+      if (i === 0) continue; // today still counts if not yet studied
+      break;
+    }
+  }
+  return streak;
+}
+
+function calcConstanciaRecord(dailyLogs) {
+  const logs = dailyLogs || [];
+  const start = firstLogDate(logs);
+  if (!start) return 0;
+  const logMap = new Map(logs.map(l => [l.date, l]));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const startDate = new Date(start + 'T00:00:00');
+  let best = 0;
+  let cur = 0;
+  for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) continue;
+    const iso = d.toISOString().slice(0, 10);
+    const log = logMap.get(iso);
+    const hours = log ? (log.hours || 0) : 0;
+    if (hours >= CONSTANCIA_HOURS_MIN) {
+      cur++;
+      if (cur > best) best = cur;
+    } else {
+      cur = 0;
+    }
+  }
+  return best;
+}
+
 window.DA = {
   INITIAL_SHARED, INITIAL_OBJETIVA, INITIAL_DISCURSIVA,
   getSubjectCompletionObj, getSubjectCompletionDisc,
@@ -662,4 +719,5 @@ window.DA = {
   getLevelInfo, daysUntil, getPetStage,
   PET_STAGES, getPetStageInfo,
   daysSinceLastStudy, studied2DaysInRow, nextPetHealth,
+  CONSTANCIA_HOURS_MIN, firstLogDate, calcConstancia, calcConstanciaRecord,
 };

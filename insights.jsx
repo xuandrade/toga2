@@ -28,23 +28,28 @@ function computeInsights(shared, objState, discState) {
       icon: '⏰',
       color: 'var(--ambar)',
       title: 'Nenhum estudo registrado hoje',
-      body: 'Registre sua sessão de hoje para manter o streak e alimentar o pet.',
+      body: 'Registre sua sessão de hoje para manter sua constância e alimentar o pet.',
       action: null,
     });
   }
 
-  // 2 — Streak em risco (não estudou ontem)
-  const yest = new Date(today - 86400000).toISOString().slice(0,10);
-  const yestLog = logByDate(yest);
-  const studiedYest = yestLog && ((yestLog.hours||0) + (yestLog.questions||0) + (yestLog.reviews||0)) > 0;
-  if (shared.streak > 0 && !studiedYest && !studiedToday) {
+  // 2 — Constância em risco (não estudou no último dia útil)
+  const prevWeekdayISO = (() => {
+    const d = new Date(today);
+    do { d.setDate(d.getDate() - 1); } while (d.getDay() === 0 || d.getDay() === 6);
+    return d.toISOString().slice(0,10);
+  })();
+  const prevLog = logByDate(prevWeekdayISO);
+  const studiedPrev = prevLog && ((prevLog.hours||0) + (prevLog.questions||0) + (prevLog.reviews||0)) > 0;
+  const todayIsWeekend = today.getDay() === 0 || today.getDay() === 6;
+  if (shared.streak > 0 && !studiedPrev && !studiedToday && !todayIsWeekend) {
     insights.push({
       id: 'streak-risk',
       priority: 9,
       icon: '🔥',
       color: 'var(--coral)',
-      title: `Streak de ${shared.streak} dia${shared.streak>1?'s':''} em risco!`,
-      body: 'Você não estudou ontem. Estude hoje para não perder sua sequência.',
+      title: `Constância de ${shared.streak} dia${shared.streak>1?'s':''} em risco!`,
+      body: 'Você não estudou no último dia útil. Estude hoje para não quebrar sua constância.',
       action: null,
     });
   }

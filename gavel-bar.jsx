@@ -1,4 +1,4 @@
-// GavelBar v2 — Premium progress bar + streak/shields inline
+// GavelBar v2 — Premium progress bar + constância/shields inline
 function GavelBar({ percentage, streak, shields }) {
   const pct = Math.min(100, Math.max(0, percentage));
   return (
@@ -45,10 +45,10 @@ function GavelBar({ percentage, streak, shields }) {
           </div>
         </div>
 
-        {/* Streak + Shields chips */}
+        {/* Constância + Shields chips */}
         <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 8.5, color: 'var(--text-dim)', letterSpacing: '0.15em', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', marginBottom: 2 }}>STREAK</div>
+            <div style={{ fontSize: 8.5, color: 'var(--text-dim)', letterSpacing: '0.15em', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', marginBottom: 2 }}>CONSTÂNCIA</div>
             <div className="num" style={{
               fontSize: 17, fontWeight: 800, color: 'var(--ambar)',
               filter: 'drop-shadow(0 0 6px rgba(255,193,7,0.5))',

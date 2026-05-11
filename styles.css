@@ -286,8 +286,8 @@ html, body {
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,184,212,0.35); border: 2px solid transparent; background-clip: padding-box; }
 
 /* ── Heatmap cells ── */
-.heat-cell { border-radius: 4px; transition: transform 120ms ease, box-shadow 120ms ease; cursor: default; }
-.heat-cell:hover { transform: scale(1.5); z-index: 2; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.heat-cell { border-radius: 4px; transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease; cursor: default; }
+.heat-cell:hover { transform: translateY(-1px); z-index: 2; box-shadow: 0 4px 12px rgba(0,0,0,0.14); filter: brightness(1.05); }
 
 /* ── Donut ── */
 .donut-ring { transform: rotate(-90deg); transform-origin: center; }

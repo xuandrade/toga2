@@ -1,27 +1,28 @@
 // TOGA — Constância Tracker v2 — Horizontal 30-block sliding window
 // Rightmost block = TODAY always. Blocks "roll left" as time passes.
+// Pre-first-log days render as empty/white. Weekends never break constância.
 
-const CONSTANCIA_THRESHOLD_H = 0.5;
+const CONSTANCIA_THRESHOLD_H = (window.DA && window.DA.CONSTANCIA_HOURS_MIN) || 0.5;
 
 function calcConstanciaStreak(logs) {
+  if (window.DA && window.DA.calcConstancia) return window.DA.calcConstancia(logs);
+  // Fallback (matches data.jsx logic)
   const today = new Date(); today.setHours(0,0,0,0);
   const logMap = new Map((logs || []).map(l => [l.date, l]));
   let streak = 0;
   for (let i = 0; i < 365; i++) {
     const d = new Date(today); d.setDate(today.getDate() - i);
-    const iso = d.toISOString().slice(0, 10);
     const dow = d.getDay();
-    const isWeekend = dow === 0 || dow === 6;
-    if (isWeekend) continue;
-    const log = logMap.get(iso);
+    if (dow === 0 || dow === 6) continue;
+    const log = logMap.get(d.toISOString().slice(0,10));
     const hours = log ? (log.hours || 0) : 0;
-    if (hours >= CONSTANCIA_THRESHOLD_H) { streak++; }
+    if (hours >= CONSTANCIA_THRESHOLD_H) streak++;
     else { if (i === 0) continue; break; }
   }
   return streak;
 }
 
-function ConstanciaTracker({ logs }) {
+function ConstanciaTracker({ logs, bestStreak }) {
   const { useState, useRef, useEffect } = React;
   const [hovered, setHovered] = useState(null);
   const scrollRef = useRef(null);
@@ -30,6 +31,14 @@ function ConstanciaTracker({ logs }) {
   const todayISO = today.toISOString().slice(0, 10);
   const logMap = new Map((logs || []).map(l => [l.date, l]));
   const NUM_BLOCKS = 30;
+
+  // First date the user actually registered any study — before this everything is "empty/white"
+  const firstISO = (window.DA && window.DA.firstLogDate)
+    ? window.DA.firstLogDate(logs || [])
+    : (() => {
+        const active = (logs || []).filter(l => (l.hours||0)+(l.questions||0)+(l.reviews||0) > 0);
+        return active.length ? active.map(l => l.date).sort()[0] : null;
+      })();
 
   // Build 30 blocks, index 0 = oldest (29 days ago), index 29 = TODAY
   const blocks = [];
@@ -44,10 +53,12 @@ function ConstanciaTracker({ logs }) {
     const log = logMap.get(iso);
     const hours = log ? (log.hours || 0) : 0;
     const questions = log ? (log.questions || 0) : 0;
+    const beforeStart = firstISO ? iso < firstISO : true;
 
-    // Determine state
+    // Determine state — pre-first-log days render as 'empty'
     let state;
     if (isFuture) state = 'future';
+    else if (beforeStart && !isToday) state = 'empty';
     else if (isWeekend) state = hours >= CONSTANCIA_THRESHOLD_H ? 'studied' : 'weekend';
     else if (hours >= CONSTANCIA_THRESHOLD_H) state = 'studied';
     else if (i === 0 && hours === 0) state = 'today-empty';
@@ -57,6 +68,11 @@ function ConstanciaTracker({ logs }) {
   }
 
   const streak = calcConstanciaStreak(logs || []);
+  const record = Math.max(
+    bestStreak || 0,
+    (window.DA && window.DA.calcConstanciaRecord) ? window.DA.calcConstanciaRecord(logs || []) : 0,
+    streak,
+  );
   const studiedCount = blocks.filter(b => b.state === 'studied').length;
   const missedCount = blocks.filter(b => b.state === 'missed').length;
   const onFire = streak >= 7;
@@ -111,6 +127,11 @@ function ConstanciaTracker({ logs }) {
         glow: '0 0 0 2px rgba(0,184,212,0.25)',
         dot: null, dotColor: null
       };
+      case 'empty': return {
+        bg: 'rgba(255,255,255,0.70)',
+        border: 'rgba(30,32,48,0.06)',
+        glow: null, dot: null, dotColor: null
+      };
       default: return {
         bg: 'rgba(30,32,48,0.04)',
         border: 'rgba(30,32,48,0.07)',
@@ -152,6 +173,14 @@ function ConstanciaTracker({ logs }) {
 
         {/* Stats chips */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div title="Maior sequência de dias úteis estudados (fins de semana não quebram)" style={{
+            padding: '4px 10px', borderRadius: 99,
+            background: 'rgba(201,169,97,0.10)', border: '1px solid rgba(201,169,97,0.30)',
+            fontSize: 11, fontWeight: 700, color: 'var(--dourado)',
+            fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.04em',
+          }}>
+            🏆 Recorde: {record} dia{record !== 1 ? 's' : ''}
+          </div>
           <div style={{
             padding: '4px 10px', borderRadius: 99,
             background: 'rgba(0,168,107,0.10)', border: '1px solid rgba(0,168,107,0.25)',
@@ -262,6 +291,7 @@ function ConstanciaTracker({ logs }) {
           { color: 'linear-gradient(135deg, #00D48A, #00A86B)', label: '4h+' },
           { color: 'linear-gradient(135deg, rgba(232,93,93,0.18), rgba(200,60,60,0.22))', label: 'Falta', border: 'rgba(232,93,93,0.38)' },
           { color: 'linear-gradient(135deg, rgba(0,168,107,0.10), rgba(0,168,107,0.15))', label: 'Fim de semana', border: 'rgba(0,168,107,0.22)' },
+          { color: 'rgba(255,255,255,0.70)', label: 'Sem registros', border: 'rgba(30,32,48,0.06)' },
         ].map((l, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{

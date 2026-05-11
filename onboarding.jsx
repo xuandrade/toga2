@@ -26,6 +26,20 @@ const ONBOARDING_STEPS = [
     ],
   },
   {
+    id: 'modes',
+    title: 'Objetiva & Discursiva',
+    subtitle: 'Dois modos para a fase certa do concurso',
+    body: 'Use o seletor no topo para alternar entre Objetiva e Discursiva. Cada modo tem sua própria matriz, marcadores e métricas — sem misturar fases.',
+    visual: 'modes',
+    icon: '🎭',
+    bullets: [
+      'Objetiva: foco em Lei · Doutrina · Juris · Questões · Revisão',
+      'Discursiva: foco em Estudado · Grifado · Questões',
+      'Cada modo guarda seu próprio progresso',
+      'Alterne a qualquer momento pelo botão no cabeçalho'
+    ],
+  },
+  {
     id: 'matriz',
     title: 'Matriz do Edital',
     subtitle: 'Controle cada tópico do seu concurso',
@@ -63,7 +77,7 @@ const ONBOARDING_STEPS = [
     bullets: [
       '30 blocos horizontais = últimos 30 dias',
       'Heatmap de horas e questões com gradiente de cor',
-      'Streak de dias consecutivos com fogo 🔥',
+      'Constância de dias consecutivos com fogo 🔥 (fins de semana não quebram)',
       'Métricas: tópicos dominados, revisões pendentes'
     ],
   },
@@ -131,8 +145,10 @@ function OnboardingModal({ onDone }) {
         background: 'rgba(11,61,92,0.50)',
         backdropFilter: 'blur(20px) saturate(120%)',
         WebkitBackdropFilter: 'blur(20px) saturate(120%)',
-        display: 'grid', placeItems: 'center',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '20px',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
         animation: exiting ? 'fade-out 300ms ease-out forwards' : 'onboarding-backdrop-in 500ms ease-out',
       }}
     >
@@ -161,16 +177,37 @@ function OnboardingModal({ onDone }) {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.12); }
         }
+        .onboarding-card { padding: 40px 44px 32px; }
+        .onboarding-cta { width: 100%; padding: 14px 24px; border-radius: 14px; border: none;
+          background: linear-gradient(135deg, var(--petroleo) 0%, var(--ciano) 100%);
+          color: white; font-size: 15px; font-weight: 700; cursor: pointer;
+          box-shadow: 0 8px 24px rgba(0,184,212,0.30), 0 0 0 1px rgba(255,255,255,0.15) inset;
+          transition: transform 200ms cubic-bezier(0.16,1,0.3,1), box-shadow 200ms;
+          letter-spacing: 0.02em;
+          touch-action: manipulation;
+          -webkit-tap-highlight-color: rgba(0,184,212,0.25);
+          position: relative;
+          z-index: 10;
+        }
+        .onboarding-cta:active { transform: translateY(0); }
+        @media (max-width: 640px) {
+          .onboarding-card { padding: 28px 22px 22px; border-radius: 18px; }
+          .onboarding-cta { padding: 16px 20px; font-size: 16px; }
+        }
+        @media (max-width: 400px) {
+          .onboarding-card { padding: 22px 16px 18px; }
+        }
       `}</style>
 
       {/* The card */}
       <div
         onClick={e => e.stopPropagation()}
-        className="glass-strong"
+        onTouchStart={e => e.stopPropagation()}
+        className="glass-strong onboarding-card"
         style={{
           width: '100%', maxWidth: 560, borderRadius: 24,
-          padding: '40px 44px 32px',
           position: 'relative',
+          margin: 'auto 0',
           boxShadow: '0 20px 60px rgba(11,61,92,0.25), 0 0 0 1px rgba(255,255,255,0.8) inset',
           animation: exiting ? 'fade-out 300ms ease-out forwards' : `onboarding-card-in 600ms cubic-bezier(0.16,1,0.3,1)`,
         }}
@@ -280,24 +317,14 @@ function OnboardingModal({ onDone }) {
           </div>
         )}
 
-        {/* Next button — ALWAYS on top */}
+        {/* Next button — ALWAYS on top, mobile-tap friendly */}
         <button
+          type="button"
           onClick={handleNext}
-          style={{
-            width: '100%', padding: '14px 24px', borderRadius: 14, border: 'none',
-            background: 'linear-gradient(135deg, var(--petroleo) 0%, var(--ciano) 100%)',
-            color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-            boxShadow: '0 8px 24px rgba(0,184,212,0.30), 0 0 0 1px rgba(255,255,255,0.15) inset',
-            transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
-            letterSpacing: '0.02em',
-            animation: 'onboarding-pulse-glow 2.5s ease-in-out infinite',
-            position: 'relative',
-            zIndex: 10,
-          }}
-          onMouseEnter={e => { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 12px 32px rgba(0,184,212,0.40), 0 0 0 1px rgba(255,255,255,0.2) inset'; }}
-          onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 8px 24px rgba(0,184,212,0.30), 0 0 0 1px rgba(255,255,255,0.15) inset'; }}
+          onTouchEnd={(e) => { e.preventDefault(); handleNext(); }}
+          className="onboarding-cta"
         >
-          {isLast ? '🚀 Começar jornada' : 'Próximo'}
+          {isLast ? '🚀 Começar jornada' : 'Prosseguir'}
         </button>
 
         {/* Step counter (subtle) */}

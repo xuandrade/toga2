@@ -1,5 +1,184 @@
 // TOGA — Página de Estatísticas (Bloco 5)
 
+function ActivityCurve({ logs }) {
+  const { useState: useSt, useRef, useEffect } = React;
+  const [hover, setHover] = useSt(null); // { i, x, y }
+  const [width, setWidth] = useSt(900);
+  const wrapRef = useRef(null);
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect?.width;
+      if (w && Math.abs(w - width) > 1) setWidth(w);
+    });
+    ro.observe(wrapRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const now = new Date();
+  const last30 = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(now - (29 - i) * 86400000);
+    const iso = d.toISOString().slice(0, 10);
+    const log = logs.find(l => l.date === iso);
+    return { date: iso, h: log?.hours || 0, q: log?.questions || 0, isToday: iso === now.toISOString().slice(0, 10) };
+  });
+  const maxH = Math.max(...last30.map(d => d.h), 0.1);
+  const maxQ = Math.max(...last30.map(d => d.q), 1);
+
+  const H = 200;
+  const PAD_L = 36, PAD_R = 16, PAD_T = 18, PAD_B = 26;
+  const innerW = Math.max(0, width - PAD_L - PAD_R);
+  const innerH = H - PAD_T - PAD_B;
+  const stepX = last30.length > 1 ? innerW / (last30.length - 1) : innerW;
+
+  const xAt = (i) => PAD_L + i * stepX;
+  const yH = (h) => PAD_T + innerH - (h / maxH) * innerH;
+
+  // Build hours line path (area)
+  const linePts = last30.map((d, i) => `${xAt(i)},${yH(d.h)}`).join(' ');
+  const areaPath = `M ${xAt(0)},${PAD_T + innerH} L ${linePts.replace(/,/g, ' ').split(' ').reduce((acc, v, idx) => idx % 2 === 0 ? acc + ' L ' + v : acc + ',' + v, '').slice(3)} L ${xAt(last30.length - 1)},${PAD_T + innerH} Z`;
+
+  const onMove = (e) => {
+    const svg = e.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / rect.width) * width;
+    const i = Math.max(0, Math.min(last30.length - 1, Math.round((px - PAD_L) / stepX)));
+    setHover({ i });
+  };
+
+  const yAxis = [0, 0.25, 0.5, 0.75, 1].map(t => ({ t, v: t * maxH, y: PAD_T + innerH - t * innerH }));
+
+  const fmtDate = (iso) => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+  };
+
+  return (
+    <div className="glass" style={{ padding: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: '0.18em', color: 'var(--text-muted)', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>
+            CURVA DE ATIVIDADE · ÚLTIMOS 30 DIAS
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+            Passe o mouse para ver detalhes do dia (horas e questões).
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+          <span><span style={{ display: 'inline-block', width: 10, height: 10, background: 'var(--ciano)', borderRadius: 3, marginRight: 6, verticalAlign: 'middle' }} />horas</span>
+          <span><span style={{ display: 'inline-block', width: 10, height: 10, background: 'var(--esmeralda)', borderRadius: 3, marginRight: 6, verticalAlign: 'middle' }} />questões</span>
+        </div>
+      </div>
+      <div ref={wrapRef} style={{ position: 'relative', width: '100%' }}>
+        <svg
+          width="100%"
+          height={H}
+          viewBox={`0 0 ${width} ${H}`}
+          preserveAspectRatio="none"
+          onMouseMove={onMove}
+          onMouseLeave={() => setHover(null)}
+          style={{ display: 'block', cursor: 'crosshair' }}
+        >
+          <defs>
+            <linearGradient id="ac-h-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--ciano)" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="var(--ciano)" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          {/* Y axis grid + labels */}
+          {yAxis.map((g, i) => (
+            <g key={i}>
+              <line x1={PAD_L} x2={width - PAD_R} y1={g.y} y2={g.y} stroke="rgba(30,32,48,0.06)" strokeDasharray={i === 0 ? '0' : '3 4'} />
+              <text x={PAD_L - 8} y={g.y + 3} fontSize="10" textAnchor="end" fill="rgba(90,100,120,0.7)" fontFamily="JetBrains Mono, monospace">{g.v.toFixed(1)}h</text>
+            </g>
+          ))}
+          {/* Area under hours line */}
+          <polyline
+            points={linePts}
+            fill="none"
+            stroke="var(--ciano)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <polygon
+            points={`${PAD_L},${PAD_T + innerH} ${linePts} ${PAD_L + (last30.length - 1) * stepX},${PAD_T + innerH}`}
+            fill="url(#ac-h-grad)"
+          />
+          {/* Question bars (small, behind line) */}
+          {last30.map((d, i) => {
+            const bx = xAt(i) - 3;
+            const bh = (d.q / maxQ) * (innerH * 0.45);
+            return (
+              <rect key={'q'+i} x={bx} y={PAD_T + innerH - bh} width={6} height={bh}
+                rx={1.5} fill="var(--esmeralda)" opacity="0.45" />
+            );
+          })}
+          {/* Hours dots */}
+          {last30.map((d, i) => (
+            <circle key={'h'+i} cx={xAt(i)} cy={yH(d.h)} r={d.isToday ? 4.5 : 3}
+              fill={d.isToday ? 'var(--petroleo)' : 'var(--ciano)'}
+              stroke="white" strokeWidth="1.5" />
+          ))}
+          {/* X axis labels (sparse) */}
+          {last30.map((d, i) => {
+            if (i % 5 !== 0 && i !== last30.length - 1) return null;
+            return (
+              <text key={'xl'+i} x={xAt(i)} y={H - 6} fontSize="9" textAnchor="middle" fill="rgba(90,100,120,0.6)" fontFamily="JetBrains Mono, monospace">
+                {new Date(d.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+              </text>
+            );
+          })}
+          {/* Hover guide */}
+          {hover && (() => {
+            const d = last30[hover.i];
+            const hx = xAt(hover.i);
+            return (
+              <g>
+                <line x1={hx} x2={hx} y1={PAD_T} y2={PAD_T + innerH} stroke="rgba(11,61,92,0.35)" strokeDasharray="3 3" />
+                <circle cx={hx} cy={yH(d.h)} r={6} fill="white" stroke="var(--ciano)" strokeWidth="2.5" />
+              </g>
+            );
+          })()}
+        </svg>
+        {hover && (() => {
+          const d = last30[hover.i];
+          const leftPct = ((xAt(hover.i)) / width) * 100;
+          const anchorRight = leftPct > 65;
+          return (
+            <div style={{
+              position: 'absolute',
+              top: 6,
+              [anchorRight ? 'right' : 'left']: `${anchorRight ? 100 - leftPct : leftPct}%`,
+              transform: anchorRight ? 'translateX(-8px)' : 'translateX(8px)',
+              pointerEvents: 'none',
+              padding: '10px 12px',
+              borderRadius: 10,
+              background: 'rgba(255,255,255,0.96)',
+              border: '1px solid rgba(0,184,212,0.35)',
+              boxShadow: '0 8px 24px rgba(11,61,92,0.18)',
+              fontSize: 11,
+              fontFamily: 'JetBrains Mono, monospace',
+              minWidth: 150,
+              zIndex: 5,
+            }}>
+              <div style={{ fontWeight: 800, color: 'var(--petroleo)', textTransform: 'capitalize', marginBottom: 4 }}>{fmtDate(d.date)}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ color: 'var(--text-muted)' }}>Horas</span>
+                <span style={{ fontWeight: 800, color: 'var(--ciano)' }}>{d.h.toFixed(1)}h</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 2 }}>
+                <span style={{ color: 'var(--text-muted)' }}>Questões</span>
+                <span style={{ fontWeight: 800, color: 'var(--esmeralda)' }}>{d.q.toLocaleString('pt-BR')}</span>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
+
 function StatsPage({ shared, objState, discState }) {
   const logs = shared.dailyLogs || [];
   const { useState: useSt } = React;
@@ -167,28 +346,11 @@ function StatsPage({ shared, objState, discState }) {
         ))}
       </div>
 
+      {/* Activity curve — full-width with hover tooltip */}
+      <ActivityCurve logs={logs} />
+
       {/* Charts grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
-
-        {/* Chart 1 — Curva de atividade (últimos 30 dias) */}
-        <div className="glass" style={{ padding: 16 }}>
-          <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 8, fontFamily: 'JetBrains Mono, monospace' }}>CURVA DE ATIVIDADE · 30 DIAS</div>
-          <svg viewBox={`0 0 300 60`} style={{ width: '100%', height: 60, overflow: 'visible' }}>
-            {last30.map((d, i) => {
-              const x = (i / 29) * 290 + 5;
-              const barH = (d.h / maxH) * 50;
-              const y = 55 - barH;
-              const isToday = d.date === now.toISOString().slice(0,10);
-              return (
-                <rect key={i} x={x-4} y={y} width={8} height={barH}
-                  rx={2} fill={isToday ? 'var(--petroleo)' : d.h > 0 ? 'var(--ciano)' : 'rgba(42,45,58,0.08)'} />
-              );
-            })}
-          </svg>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-dim)', marginTop: 4, fontFamily: 'JetBrains Mono, monospace' }}>
-            <span>30 dias atrás</span><span>hoje</span>
-          </div>
-        </div>
 
         {/* Chart 2 — Horas por disciplina */}
         <div className="glass" style={{ padding: 16 }}>
