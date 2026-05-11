@@ -493,21 +493,24 @@ function StatsPage({ shared, objState, discState }) {
 // ── Constância % card ──
 function ConstanciaPercentCard({ logs, bestStreak }) {
   const startISO = (window.DA && window.DA.firstLogDate) ? window.DA.firstLogDate(logs || []) : null;
-  let weekdaysTotal = 0;
-  let weekdaysStudied = 0;
+  let totalDays = 0;
+  let fulfilledDays = 0;
   if (startISO) {
     const start = new Date(startISO + 'T00:00:00');
     const today = new Date(); today.setHours(0,0,0,0);
     const logMap = new Map((logs || []).map(l => [l.date, l]));
     for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
       const dow = d.getDay();
-      if (dow === 0 || dow === 6) continue;
-      weekdaysTotal++;
-      const log = logMap.get(d.toISOString().slice(0,10));
-      if (log && (log.hours || 0) >= 0.5) weekdaysStudied++;
+      totalDays++;
+      if (dow === 0 || dow === 6) {
+        fulfilledDays++; // weekends auto-fulfilled
+      } else {
+        const log = logMap.get(d.toISOString().slice(0,10));
+        if (log && (log.hours || 0) >= 0.5) fulfilledDays++;
+      }
     }
   }
-  const pct = weekdaysTotal > 0 ? (weekdaysStudied / weekdaysTotal) * 100 : 0;
+  const pct = totalDays > 0 ? (fulfilledDays / totalDays) * 100 : 0;
   const currentStreak = (window.DA && window.DA.calcConstancia) ? window.DA.calcConstancia(logs || []) : 0;
   const record = Math.max(bestStreak || 0, (window.DA && window.DA.calcConstanciaRecord) ? window.DA.calcConstanciaRecord(logs || []) : 0, currentStreak);
   const tier = pct >= 90 ? 'var(--esmeralda)' : pct >= 70 ? '#00b8d4' : pct >= 50 ? 'var(--ambar)' : 'var(--coral)';
@@ -528,7 +531,7 @@ function ConstanciaPercentCard({ logs, bestStreak }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 700, marginBottom: 6 }}>
-            {weekdaysStudied} de {weekdaysTotal} dias úteis
+            {fulfilledDays} de {totalDays} dias
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
@@ -543,7 +546,7 @@ function ConstanciaPercentCard({ logs, bestStreak }) {
         </div>
       </div>
       <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 10, lineHeight: 1.4 }}>
-        Fins de semana não contam — só dias úteis a partir do primeiro registro.
+        Fins de semana contam como cumpridos — calculado a partir do primeiro registro.
       </div>
     </div>
   );

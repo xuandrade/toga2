@@ -668,14 +668,17 @@ function firstLogDate(dailyLogs) {
 
 function calcConstancia(dailyLogs) {
   const logs = dailyLogs || [];
+  const firstISO = firstLogDate(logs);
+  if (!firstISO) return 0;
   const logMap = new Map(logs.map(l => [l.date, l]));
   const today = new Date(); today.setHours(0, 0, 0, 0);
   let streak = 0;
   for (let i = 0; i < 730; i++) {
     const d = new Date(today); d.setDate(today.getDate() - i);
     const iso = d.toISOString().slice(0, 10);
+    if (iso < firstISO) break;
     const dow = d.getDay();
-    if (dow === 0 || dow === 6) continue; // weekend pass
+    if (dow === 0 || dow === 6) { streak++; continue; } // weekends auto-fulfilled
     const log = logMap.get(iso);
     const hours = log ? (log.hours || 0) : 0;
     if (hours >= CONSTANCIA_HOURS_MIN) {
@@ -699,7 +702,11 @@ function calcConstanciaRecord(dailyLogs) {
   let cur = 0;
   for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
     const dow = d.getDay();
-    if (dow === 0 || dow === 6) continue;
+    if (dow === 0 || dow === 6) { // weekends auto-fulfilled
+      cur++;
+      if (cur > best) best = cur;
+      continue;
+    }
     const iso = d.toISOString().slice(0, 10);
     const log = logMap.get(iso);
     const hours = log ? (log.hours || 0) : 0;
