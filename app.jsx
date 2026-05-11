@@ -13,7 +13,7 @@ const { useState, useEffect, useRef } = React;
 function AchievementToast({ kind, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 4500); return () => clearTimeout(t); }, []);
   const A = {
-    week_streak:    { title: '7 dias seguidos',              sub: 'Uma semana inteira encadeada',         icon: '🔥', color: '#f59e0b' },
+    week_streak:    { title: '7 dias de constância',         sub: 'Uma semana inteira encadeada',         icon: '🔥', color: '#f59e0b' },
     marathon:       { title: 'Maratonista',                  sub: 'Sessão de 90 min completa',            icon: '🛡', color: 'var(--tinta)' },
     first_mastered: { title: 'Primeiro tema dominado',       sub: 'Um tópico conquistado',                icon: '⚡', color: '#00b8d4' },
     half_edital:    { title: 'Meio edital',                  sub: '50% dos tópicos dominados',            icon: '🏆', color: 'var(--esmeralda)' },
@@ -61,6 +61,59 @@ const DEFAULTS = /*EDITMODE-BEGIN*/{
   "view": "dashboard",
   "mode": "objetiva"
 }/*EDITMODE-END*/;
+
+// Frases inspiradoras diárias — rotação determinística pelo dia do ano
+const DAILY_PHRASES = [
+  { text: 'Disciplina é a ponte entre as metas e as conquistas.', author: 'Jim Rohn' },
+  { text: 'Constância vence talento quando o talento não é constante.', author: 'TOGA' },
+  { text: 'Aprovação não acontece num dia — acontece todos os dias.', author: 'TOGA' },
+  { text: 'O sucesso é a soma de pequenos esforços repetidos dia após dia.', author: 'Robert Collier' },
+  { text: 'Sua única competição é quem você foi ontem.', author: 'James Clear' },
+  { text: 'Não pare quando estiver cansado. Pare quando tiver terminado.', author: 'David Goggins' },
+  { text: 'A toga não veste quem desiste no meio do caminho.', author: 'TOGA' },
+  { text: 'A persistência realiza o impossível.', author: 'Provérbio chinês' },
+  { text: 'Pequenos passos diários superam grandes saltos esporádicos.', author: 'TOGA' },
+  { text: 'A dor da disciplina pesa gramas; a dor do arrependimento, toneladas.', author: 'Jim Rohn' },
+  { text: 'O futuro pertence àqueles que se preparam hoje.', author: 'Malcolm X' },
+  { text: 'Aprovar é decidir, todo dia, não desistir.', author: 'TOGA' },
+  { text: 'Quem planta constância, colhe aprovação.', author: 'TOGA' },
+  { text: 'Estude como se a vaga já fosse sua — porque ela está.', author: 'TOGA' },
+  { text: 'Foco não é fazer mil coisas, é dizer não pra novecentas e noventa e nove.', author: 'Steve Jobs' },
+  { text: 'Hábitos diários definem destinos finais.', author: 'TOGA' },
+  { text: 'Não conte os dias — faça os dias contarem.', author: 'Muhammad Ali' },
+  { text: 'A diferença entre o ordinário e o extraordinário é o "extra".', author: 'Jimmy Johnson' },
+  { text: 'Comece onde está. Use o que tem. Faça o que pode.', author: 'Arthur Ashe' },
+  { text: 'A jornada de mil páginas começa com uma única virada.', author: 'TOGA' },
+];
+
+function DailyPhrase() {
+  const today = new Date();
+  const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
+  const p = DAILY_PHRASES[dayOfYear % DAILY_PHRASES.length];
+  return (
+    <div className="anim-slide-up glass" style={{
+      animationDelay: '40ms',
+      padding: '12px 16px',
+      display: 'flex', alignItems: 'flex-start', gap: 12,
+      background: 'linear-gradient(135deg, rgba(11,61,92,0.05), rgba(0,184,212,0.05))',
+      border: '1px solid rgba(0,184,212,0.15)',
+      borderLeft: '3px solid var(--ciano)',
+    }}>
+      <div style={{ fontSize: 20, lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 0 6px rgba(0,184,212,0.4))' }}>✨</div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, marginBottom: 4 }}>
+          INSPIRAÇÃO DO DIA
+        </div>
+        <div className="font-display" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.45, fontStyle: 'italic' }}>
+          "{p.text}"
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, fontWeight: 600 }}>
+          — {p.author}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Goals Modal ────────────────────────────────────────────
 function GoalsModal({ open, goals, onSave, onClose }) {
@@ -347,7 +400,12 @@ function App() {
   useEffect(() => saveKey(KEYS.meta, meta), [meta]);
 
   useEffect(() => {
-    setShared(s => ({ petHealth: s.petHealth || 'healthy', goals: { dailyFlashcards: 30, ...s.goals }, ...s }));
+    setShared(s => {
+      const logs = s.dailyLogs || [];
+      const streak = window.DA.calcConstancia(logs);
+      const bestStreak = Math.max(s.bestStreak || 0, window.DA.calcConstanciaRecord(logs), streak);
+      return { petHealth: s.petHealth || 'healthy', goals: { dailyFlashcards: 30, ...s.goals }, ...s, streak, bestStreak };
+    });
     const todayISO = new Date().toISOString();
     const FLAGS_O = ['lei','doutrina','juris','questoes','revisao'];
     const FLAGS_D = ['estudado','grifado','questoes'];
@@ -401,17 +459,12 @@ function App() {
     if (next !== shared.petHealth) setShared(s => ({ ...s, petHealth: next }));
   }, []);
 
-  const calcStreak = (logs) => {
-    const active = new Set(logs.filter(l => (l.hours||0) + (l.questions||0) + (l.reviews||0) > 0).map(l => l.date));
-    if (active.size === 0) return 0;
-    const today = new Date(); today.setHours(0,0,0,0);
-    const todayISO = today.toISOString().slice(0,10);
-    const yestISO  = new Date(today.getTime() - 86400000).toISOString().slice(0,10);
-    if (!active.has(todayISO) && !active.has(yestISO)) return 0;
-    let streak = 0; let d = new Date(today);
-    if (!active.has(todayISO)) d.setDate(d.getDate() - 1);
-    while (active.has(d.toISOString().slice(0,10))) { streak++; d.setDate(d.getDate() - 1); }
-    return streak;
+  const calcStreak = (logs) => window.DA.calcConstancia(logs);
+  const calcBestStreak = (logs) => window.DA.calcConstanciaRecord(logs);
+  const withStreakState = (s, logs) => {
+    const streak = calcStreak(logs);
+    const bestStreak = Math.max(s.bestStreak || 0, calcBestStreak(logs), streak);
+    return { ...s, dailyLogs: logs, streak, bestStreak };
   };
 
   const mergeLog = (logs, e) => {
@@ -441,7 +494,7 @@ function App() {
       const { logs, idx } = mergeLog(s.dailyLogs, entry);
       const day = logs[idx];
       const bonus = goalCrossBonus(day, (day.hours||0)-h, (day.questions||0)-q, s.goals);
-      return { ...s, dailyLogs: logs, xp: s.xp + bonus, streak: calcStreak(logs) };
+      return { ...withStreakState(s, logs), xp: s.xp + bonus };
     });
     window.celebrateVictory && window.celebrateVictory();
   };
@@ -451,7 +504,7 @@ function App() {
       const { logs, idx } = mergeLog(s.dailyLogs, logEntry);
       const day = logs[idx];
       const bonus = goalCrossBonus(day, (day.hours||0)-(logEntry.hours||0), (day.questions||0)-(logEntry.questions||0), s.goals);
-      return { ...s, dailyLogs: logs, xp: s.xp + bonus, streak: calcStreak(logs) };
+      return { ...withStreakState(s, logs), xp: s.xp + bonus };
     });
     window.celebrateLight && window.celebrateLight();
   };
@@ -495,7 +548,7 @@ function App() {
         newLogs = [...logs];
         newLogs[i] = recomputeDayTotals({ ...day, entries: newEntries });
       }
-      return { ...s, dailyLogs: newLogs, streak: calcStreak(newLogs) };
+      return withStreakState(s, newLogs);
     });
   };
 
@@ -512,7 +565,7 @@ function App() {
         const newEntries = day.entries.map((e, k) => k === idx ? newEntry : e);
         const newLogs = [...logs];
         newLogs[i] = recomputeDayTotals({ ...day, entries: newEntries });
-        return { ...s, dailyLogs: newLogs, streak: calcStreak(newLogs) };
+        return withStreakState(s, newLogs);
       }
 
       // Date changed: remove from old day, add to new day.
@@ -529,7 +582,7 @@ function App() {
         working.push(recomputeDayTotals({ date: newDate, entries: [{ ...newEntry, date: newDate }] }));
         working.sort((a, b) => a.date.localeCompare(b.date));
       }
-      return { ...s, dailyLogs: working, streak: calcStreak(working) };
+      return withStreakState(s, working);
     });
   };
 
@@ -549,7 +602,7 @@ function App() {
       const { logs, idx } = mergeLog(s.dailyLogs, entry);
       const day = logs[idx];
       const cross = goalCrossBonus(day, (day.hours||0)-hours, (day.questions||0), s.goals);
-      return { ...s, dailyLogs: logs, xp: s.xp + 2 + cross, streak: calcStreak(logs) };
+      return { ...withStreakState(s, logs), xp: s.xp + 2 + cross };
     });
     if (minutes >= 90) pushToast('marathon');
     window.celebrateVictory();
@@ -648,6 +701,7 @@ function App() {
                     </span>
                   </div>
                 </div>
+                <DailyPhrase />
                 <PetCompanion xp={shared.xp} sick={isSick} dailyLogs={shared.dailyLogs} />
               </div>
 
@@ -672,21 +726,19 @@ function App() {
                 <div className="anim-slide-up" style={{ animationDelay: '140ms' }}>
                   <ConcursoDonuts concursos={shared.concursos || []} setConcursos={setConcursos} />
                 </div>
-
-                {shared.concursos && shared.concursos.length > 0 && (
-                  <div className="anim-slide-up" style={{ animationDelay: '180ms' }}>
-                    <ConcursoTimeline concursos={shared.concursos} onAddConcurso={(c) => setConcursos(cs => [...cs, c])} />
-                  </div>
-                )}
               </div>
             </div>
 
             <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '60ms' }}>
-              <ConstanciaTracker logs={shared.dailyLogs} />
+              <ConstanciaTracker logs={shared.dailyLogs} bestStreak={shared.bestStreak} />
             </section>
 
             <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '80ms' }}>
               <MetricsRow shared={shared} setShared={setShared} />
+            </section>
+
+            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '90ms' }}>
+              <AccuracyOverallCard shared={shared} />
             </section>
 
             <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '100ms' }}>
@@ -699,7 +751,7 @@ function App() {
 
             <div className="dual-grid anim-slide-up" style={{ display: 'grid', gap: 14, marginBottom: 16, animationDelay: '140ms' }}>
               <StudyHeatmap logs={shared.dailyLogs} />
-              <FlashcardHeatmap logs={shared.dailyLogs} />
+              <QuestionsFlashcardsHeatmap logs={shared.dailyLogs} />
             </div>
           </>
         )}
@@ -727,8 +779,8 @@ function App() {
                 </div>
               </div>
               {mode === 'objetiva'
-                ? <SyllabusMatrixObjetiva state={objState} setState={setObjState} onMaster={handleMaster} onCheckXp={handleCheckXp} />
-                : <SyllabusMatrixDiscursiva state={discState} setState={setDiscState} onCheckXp={handleCheckXp} />}
+                ? <SyllabusMatrixObjetiva state={objState} setState={setObjState} onMaster={handleMaster} onCheckXp={handleCheckXp} dailyLogs={shared.dailyLogs} />
+                : <SyllabusMatrixDiscursiva state={discState} setState={setDiscState} onCheckXp={handleCheckXp} dailyLogs={shared.dailyLogs} />}
             </section>
             {activeSubjects.length > 0 && (
               <section style={{ marginBottom: 16 }}>

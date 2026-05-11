@@ -1,5 +1,17 @@
 // TOGA — MetricsRow + ConcursoDonuts v2 — Ultra Premium
 
+const INCENTIVE_MESSAGES = [
+  { min: 1.00, text: '🏆 Meta batida! Você é um(a) monstro(a) da disciplina.' },
+  { min: 0.90, text: '🔥 Falta tão pouco! Não para agora.' },
+  { min: 0.80, text: '💪 Quase lá! Mais um esforço.' },
+  { min: 0.70, text: '✨ Você está em ritmo de aprovado(a)!' },
+  { min: 0.60, text: '🚀 Boa! Já passou da metade — siga firme.' },
+];
+
+function incentiveFor(progress) {
+  return INCENTIVE_MESSAGES.find(m => progress >= m.min) || null;
+}
+
 // ── MetricsRow: 4 metric cards ──
 function MetricsRow({ shared, setShared }) {
   const today = shared.dailyLogs[shared.dailyLogs.length - 1] || { hours: 0, questions: 0, reviews: 0 };
@@ -17,8 +29,15 @@ function MetricsRow({ shared, setShared }) {
   return (
     <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(4, 1fr)' }} className="metrics-row">
       {metrics.map((m, i) => {
-        const progress = Math.min(1, parseFloat(m.value) / (m.goal || 1));
+        const numericValue = parseFloat(m.value) || 0;
+        const goal = m.goal || 0;
+        const rawProgress = goal > 0 ? numericValue / goal : 0;
+        const progress = Math.min(1, rawProgress);
         const done = progress >= 1;
+        const pctDone = Math.round(rawProgress * 100);
+        const remaining = Math.max(0, goal - numericValue);
+        const remainingStr = m.unit === 'h' ? remaining.toFixed(1) : Math.ceil(remaining).toString();
+        const incentive = goal > 0 ? incentiveFor(rawProgress) : null;
         return (
           <div key={i} className="glass anim-slide-up" style={{
             padding: '16px 18px',
@@ -49,7 +68,7 @@ function MetricsRow({ shared, setShared }) {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
               <span className="num" style={{
                 fontSize: 30, fontWeight: 800, color: m.colorRaw,
                 letterSpacing: '-0.03em',
@@ -73,6 +92,32 @@ function MetricsRow({ shared, setShared }) {
                 transition: 'width 700ms cubic-bezier(0.16,1,0.3,1)',
               }} />
             </div>
+
+            {/* Progress labels: cumprida + restante */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              marginTop: 6, fontSize: 10,
+              fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+              letterSpacing: '0.04em',
+            }}>
+              <span style={{ color: m.colorRaw }}>{pctDone}% cumprida</span>
+              <span style={{ color: 'var(--text-dim)' }}>
+                {done ? 'meta atingida' : `faltam ${remainingStr}${m.unit}`}
+              </span>
+            </div>
+
+            {/* Incentive (only when >= 60%) */}
+            {incentive && (
+              <div style={{
+                marginTop: 8, padding: '6px 10px', borderRadius: 8,
+                background: `linear-gradient(90deg, ${m.colorRaw}14, ${m.colorRaw}06)`,
+                border: `1px solid ${m.colorRaw}30`,
+                fontSize: 11, fontWeight: 700, color: m.colorRaw,
+                letterSpacing: '0.01em', lineHeight: 1.3,
+              }}>
+                {incentive.text}
+              </div>
+            )}
           </div>
         );
       })}
@@ -251,5 +296,127 @@ function ConcursoDonutItem({ c, onEdit, idx }) {
   );
 }
 
+// ── AccuracyOverallCard — gráfico rosa de % de acertos geral ──
+function AccuracyOverallCard({ shared }) {
+  const logs = shared.dailyLogs || [];
+  let totalCorrect = 0, totalWrong = 0;
+  // Sum across entries (use entries[] when available)
+  logs.forEach(l => {
+    const ents = (l.entries && l.entries.length > 0) ? l.entries : [l];
+    ents.forEach(e => {
+      totalCorrect += e.correct || 0;
+      totalWrong += e.wrong || 0;
+    });
+  });
+  const totalQ = totalCorrect + totalWrong;
+  const pct = totalQ > 0 ? (totalCorrect / totalQ) * 100 : 0;
+
+  // Last 7 days accuracy
+  const today = new Date(); today.setHours(0,0,0,0);
+  let weekCorrect = 0, weekWrong = 0;
+  logs.forEach(l => {
+    const d = new Date(l.date + 'T00:00:00');
+    if ((today - d) > 7 * 86400000) return;
+    const ents = (l.entries && l.entries.length > 0) ? l.entries : [l];
+    ents.forEach(e => {
+      weekCorrect += e.correct || 0;
+      weekWrong += e.wrong || 0;
+    });
+  });
+  const weekTotal = weekCorrect + weekWrong;
+  const weekPct = weekTotal > 0 ? (weekCorrect / weekTotal) * 100 : 0;
+
+  const PINK = '#EC4899';
+  const PINK_DEEP = '#BE185D';
+  const PINK_GLOW = '#F472B6';
+
+  const r = 56;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
+
+  if (totalQ === 0) {
+    return (
+      <div className="glass" style={{ padding: '18px 20px' }}>
+        <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, marginBottom: 6 }}>
+          PERCENTUAL DE ACERTOS · GERAL
+        </div>
+        <div className="font-display" style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Ainda sem questões registradas</div>
+        <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+          Registre sessões com acertos/erros pra acompanhar sua acurácia geral aqui.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass anim-slide-up" style={{
+      padding: '18px 20px',
+      background: `linear-gradient(145deg, rgba(255,255,255,0.85), rgba(255,255,255,0.6)), radial-gradient(ellipse at 0% 0%, ${PINK}14, transparent 60%)`,
+      border: `1px solid ${PINK}28`,
+      boxShadow: `0 0 0 1px ${PINK}22, 0 8px 32px -8px ${PINK_GLOW}33, var(--card-shadow)`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', width: 140, height: 140, flexShrink: 0 }}>
+          <svg viewBox="0 0 140 140" width={140} height={140} style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
+            <defs>
+              <linearGradient id="acc-pink-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor={PINK_GLOW} />
+                <stop offset="100%" stopColor={PINK_DEEP} />
+              </linearGradient>
+            </defs>
+            <circle cx="70" cy="70" r={r} fill="none" stroke={`${PINK}1a`} strokeWidth="11" />
+            <circle cx="70" cy="70" r={r} fill="none" stroke="url(#acc-pink-grad)" strokeWidth="11"
+              strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+              style={{
+                filter: `drop-shadow(0 0 8px ${PINK_GLOW}88)`,
+                transition: 'stroke-dasharray 800ms cubic-bezier(0.16,1,0.3,1)',
+              }} />
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
+            <div>
+              <div className="num" style={{
+                fontSize: 30, fontWeight: 800, color: PINK_DEEP, lineHeight: 1, letterSpacing: '-0.03em',
+                filter: `drop-shadow(0 0 6px ${PINK_GLOW}66)`,
+              }}>{pct.toFixed(0)}<span style={{ fontSize: 16, opacity: 0.7 }}>%</span></div>
+              <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.16em', fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', marginTop: 3 }}>
+                ACERTOS
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, marginBottom: 4 }}>
+            PERCENTUAL DE ACERTOS · GERAL
+          </div>
+          <div className="font-display" style={{ fontSize: 18, fontWeight: 700, color: PINK_DEEP, marginBottom: 8 }}>
+            {pct >= 80 ? 'Excelente acurácia 🎯'
+              : pct >= 70 ? 'Boa acurácia 👍'
+              : pct >= 60 ? 'No caminho certo'
+              : pct >= 50 ? 'Atenção: revisar teoria'
+              : 'Crítico: foque em teoria antes de questões'}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10 }}>
+            <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(0,168,107,0.08)', border: '1px solid rgba(0,168,107,0.18)' }}>
+              <div style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.1em' }}>ACERTOS</div>
+              <div className="num" style={{ fontSize: 18, fontWeight: 800, color: 'var(--esmeralda)' }}>{totalCorrect.toLocaleString('pt-BR')}</div>
+            </div>
+            <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(232,93,93,0.08)', border: '1px solid rgba(232,93,93,0.18)' }}>
+              <div style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.1em' }}>ERROS</div>
+              <div className="num" style={{ fontSize: 18, fontWeight: 800, color: 'var(--coral)' }}>{totalWrong.toLocaleString('pt-BR')}</div>
+            </div>
+            <div style={{ padding: '8px 10px', borderRadius: 8, background: `${PINK}10`, border: `1px solid ${PINK}28` }}>
+              <div style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.1em' }}>7 DIAS</div>
+              <div className="num" style={{ fontSize: 18, fontWeight: 800, color: PINK_DEEP }}>
+                {weekTotal > 0 ? `${weekPct.toFixed(0)}%` : '—'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 window.MetricsRow = MetricsRow;
 window.ConcursoDonuts = ConcursoDonuts;
+window.AccuracyOverallCard = AccuracyOverallCard;

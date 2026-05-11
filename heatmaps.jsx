@@ -95,7 +95,7 @@ function buildHeat(logs, field, view) {
   return { cells, weeks, view };
 }
 
-function HeatmapCard({ logs, title, field, color, label, unit }) {
+function HeatmapCard({ logs, title, field, color, label, unit, headerAction }) {
   const [view, setView] = React.useState('month');
   const heat = buildHeat(logs, field, view);
   const { cells } = heat;
@@ -137,19 +137,22 @@ function HeatmapCard({ logs, title, field, color, label, unit }) {
             </span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 4, padding: 3, background: 'rgba(30,32,48,0.04)', borderRadius: 8, border: '1px solid rgba(30,32,48,0.07)' }}>
-          {['month','year'].map(v => (
-            <button key={v} onClick={() => setView(v)} style={{
-              padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
-              background: view === v ? 'var(--petroleo)' : 'transparent',
-              color: view === v ? 'white' : 'var(--text-muted)',
-              transition: 'all 160ms ease',
-              boxShadow: view === v ? '0 2px 8px rgba(11,61,92,0.25)' : 'none',
-            }}>
-              {v === 'month' ? 'Mês' : 'Ano'}
-            </button>
-          ))}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {headerAction}
+          <div style={{ display: 'flex', gap: 4, padding: 3, background: 'rgba(30,32,48,0.04)', borderRadius: 8, border: '1px solid rgba(30,32,48,0.07)' }}>
+            {['month','year'].map(v => (
+              <button key={v} onClick={() => setView(v)} style={{
+                padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                background: view === v ? 'var(--petroleo)' : 'transparent',
+                color: view === v ? 'white' : 'var(--text-muted)',
+                transition: 'all 160ms ease',
+                boxShadow: view === v ? '0 2px 8px rgba(11,61,92,0.25)' : 'none',
+              }}>
+                {v === 'month' ? 'Mês' : 'Ano'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -178,22 +181,41 @@ function HeatmapCard({ logs, title, field, color, label, unit }) {
                 const bg = cellBg(c.value, false);
                 const day = new Date(c.date + 'T00:00:00').getDate();
                 const isWeekend = c.dow === 0 || c.dow === 6;
+                const valStr = c.value > 0
+                  ? (field === 'hours' ? c.value.toFixed(c.value >= 10 ? 0 : 1) : c.value.toLocaleString('pt-BR'))
+                  : null;
                 return (
                   <div key={i}
                     className="heat-cell"
                     title={`${c.date}: ${c.value.toFixed(field === 'hours' ? 1 : 0)}${unit}`}
                     style={{
+                      position: 'relative',
                       height: CELL_M, borderRadius: 8,
                       background: bg,
                       border: `1px solid ${c.isToday ? color : (c.value > 0 ? 'transparent' : 'rgba(30,32,48,0.06)')}`,
                       boxShadow: c.isToday ? `0 0 0 2px ${color}44, 0 0 8px ${color}33` : (c.value > 0 ? `0 1px 3px rgba(0,0,0,0.06)` : 'none'),
                       display: 'grid', placeItems: 'center',
-                      fontSize: 11, fontWeight: 600,
-                      color: c.value > 0 ? 'var(--grafite)' : (isWeekend ? 'var(--text-dim)' : 'var(--text-dim)'),
-                      opacity: isWeekend && c.value === 0 ? 0.5 : 1,
+                      opacity: isWeekend && c.value === 0 ? 0.55 : 1,
                       transition: 'all 120ms ease',
+                      overflow: 'hidden',
                     }}>
-                    {day}
+                    <span style={{
+                      position: 'absolute', top: 3, left: 4,
+                      fontSize: 8.5, fontWeight: 700,
+                      color: 'var(--text-dim)',
+                      fontFamily: 'JetBrains Mono, monospace',
+                      letterSpacing: '0.02em',
+                      lineHeight: 1,
+                    }}>{day}</span>
+                    {valStr && (
+                      <span className="num" style={{
+                        fontSize: valStr.length >= 4 ? 11 : 13,
+                        fontWeight: 800,
+                        color: '#1a1c28',
+                        lineHeight: 1,
+                        marginTop: 4,
+                      }}>{valStr}</span>
+                    )}
                   </div>
                 );
               })}
@@ -292,12 +314,50 @@ function HeatmapCard({ logs, title, field, color, label, unit }) {
 }
 
 function StudyHeatmap({ logs }) {
-  return <HeatmapCard logs={logs} title="HEATMAP DE ESTUDO" field="hours" color="#00b8d4" label="horas" unit="h" />;
+  return <HeatmapCard logs={logs} title="HEATMAP DE HORAS" field="hours" color="#00A86B" label="horas" unit="h" />;
 }
+
+function QuestionsFlashcardsHeatmap({ logs }) {
+  const [mode, setMode] = React.useState('questions');
+  const isQ = mode === 'questions';
+  const color = isQ ? '#5B47B8' : '#0EA5E9';
+  const colorBg = isQ ? 'rgba(91,71,184,0.10)' : 'rgba(14,165,233,0.10)';
+  const colorBorder = isQ ? 'rgba(91,71,184,0.35)' : 'rgba(14,165,233,0.45)';
+  const otherLabel = isQ ? 'Flash Cards' : 'Questões';
+  const otherColor = isQ ? '#0EA5E9' : '#5B47B8';
+  const toggleBtn = (
+    <button
+      onClick={() => setMode(isQ ? 'flashcards' : 'questions')}
+      title={`Mostrar ${otherLabel}`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+        border: `1px solid ${otherColor}`,
+        background: `linear-gradient(135deg, ${otherColor}22, ${otherColor}11)`,
+        color: otherColor,
+        fontSize: 11, fontWeight: 800, letterSpacing: '0.04em',
+        fontFamily: 'JetBrains Mono, monospace',
+        boxShadow: `0 2px 8px ${otherColor}33, 0 0 0 1px rgba(255,255,255,0.6) inset`,
+        transition: 'all 160ms ease',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 4px 14px ${otherColor}55, 0 0 0 1px rgba(255,255,255,0.6) inset`; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 2px 8px ${otherColor}33, 0 0 0 1px rgba(255,255,255,0.6) inset`; }}
+    >
+      {isQ ? '🃏' : '❓'} Ver {otherLabel}
+    </button>
+  );
+  if (isQ) {
+    return <HeatmapCard logs={logs} title="HEATMAP DE QUESTÕES" field="questions" color={color} label="questões" unit="" headerAction={toggleBtn} />;
+  }
+  return <HeatmapCard logs={logs} title="HEATMAP DE FLASH CARDS" field="reviews" color={color} label="flashcards" unit="" headerAction={toggleBtn} />;
+}
+
+// Backwards compatibility — kept so old references keep working
 function FlashcardHeatmap({ logs }) {
-  return <HeatmapCard logs={logs} title="QUESTÕES / FLASHCARDS" field="questions" color="var(--tinta)" label="questões" unit="" />;
+  return <QuestionsFlashcardsHeatmap logs={logs} />;
 }
 
 window.SubjectDonuts = SubjectDonuts;
 window.StudyHeatmap = StudyHeatmap;
+window.QuestionsFlashcardsHeatmap = QuestionsFlashcardsHeatmap;
 window.FlashcardHeatmap = FlashcardHeatmap;

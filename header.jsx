@@ -49,8 +49,8 @@ function GlobalHeader({ shared, mode, setMode, totalPct, onOpenSettings }) {
           <span style={{ fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.12em', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>XP</span>
         </div>
 
-        {/* Streak chip */}
-        <div style={{
+        {/* Constância chip */}
+        <div title="Constância atual (sequência de dias úteis estudados)" style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '7px 13px', borderRadius: 10,
           background: 'rgba(245,158,11,0.07)',
@@ -59,6 +59,7 @@ function GlobalHeader({ shared, mode, setMode, totalPct, onOpenSettings }) {
         }}>
           <span style={{ fontSize: 13, filter: 'drop-shadow(0 0 4px rgba(255,193,7,0.6))' }}>🔥</span>
           <span className="num" style={{ fontSize: 13, fontWeight: 700, color: 'var(--ambar)', letterSpacing: '-0.01em' }}>{shared.streak}</span>
+          <span style={{ fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.12em', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>CONSTÂNCIA</span>
         </div>
       </div>
     </header>
