@@ -299,8 +299,8 @@ function ConcursoDonutItem({ c, onEdit, idx }) {
 // ── AccuracyOverallCard — gráfico rosa de % de acertos geral ──
 function AccuracyOverallCard({ shared }) {
   const logs = shared.dailyLogs || [];
+  const simulados = shared.simulados || [];
   let totalCorrect = 0, totalWrong = 0;
-  // Sum across entries (use entries[] when available)
   logs.forEach(l => {
     const ents = (l.entries && l.entries.length > 0) ? l.entries : [l];
     ents.forEach(e => {
@@ -308,10 +308,17 @@ function AccuracyOverallCard({ shared }) {
       totalWrong += e.wrong || 0;
     });
   });
+  // Simulados aggregate too
+  simulados.forEach(sim => {
+    (sim.disciplinas || []).forEach(d => {
+      totalCorrect += d.correct || 0;
+      totalWrong   += d.wrong   || 0;
+    });
+  });
   const totalQ = totalCorrect + totalWrong;
   const pct = totalQ > 0 ? (totalCorrect / totalQ) * 100 : 0;
 
-  // Last 7 days accuracy
+  // Last 7 days accuracy (logs + simulados)
   const today = new Date(); today.setHours(0,0,0,0);
   let weekCorrect = 0, weekWrong = 0;
   logs.forEach(l => {
@@ -321,6 +328,15 @@ function AccuracyOverallCard({ shared }) {
     ents.forEach(e => {
       weekCorrect += e.correct || 0;
       weekWrong += e.wrong || 0;
+    });
+  });
+  simulados.forEach(sim => {
+    if (!sim.date) return;
+    const d = new Date(sim.date + 'T00:00:00');
+    if ((today - d) > 7 * 86400000) return;
+    (sim.disciplinas || []).forEach(rd => {
+      weekCorrect += rd.correct || 0;
+      weekWrong   += rd.wrong   || 0;
     });
   });
   const weekTotal = weekCorrect + weekWrong;

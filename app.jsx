@@ -499,12 +499,14 @@ function App() {
     window.celebrateVictory && window.celebrateVictory();
   };
 
-  const handleEnrichedLog = (logEntry) => {
+  const handleEnrichedLog = (logEntry, opts) => {
+    const noXp = opts && opts.noXp;
+    const bonusXp = (opts && opts.bonusXp) || 0;
     setShared(s => {
       const { logs, idx } = mergeLog(s.dailyLogs, logEntry);
       const day = logs[idx];
-      const bonus = goalCrossBonus(day, (day.hours||0)-(logEntry.hours||0), (day.questions||0)-(logEntry.questions||0), s.goals);
-      return { ...withStreakState(s, logs), xp: s.xp + bonus };
+      const cross = noXp ? 0 : goalCrossBonus(day, (day.hours||0)-(logEntry.hours||0), (day.questions||0)-(logEntry.questions||0), s.goals);
+      return { ...withStreakState(s, logs), xp: s.xp + cross + (noXp ? 0 : bonusXp) };
     });
     window.celebrateLight && window.celebrateLight();
   };
@@ -533,6 +535,7 @@ function App() {
   };
 
   const [editTarget, setEditTarget] = useState(null); // { date, idx, entry }
+  const [pomodoroPrefill, setPomodoroPrefill] = useState(null); // { initial, awardXp }
 
   const handleDeleteEntry = (date, idx) => {
     setShared(s => {
@@ -618,6 +621,18 @@ function App() {
   const handleCheckXp = (delta) => setShared(s => ({ ...s, xp: Math.max(0, s.xp + delta) }));
 
   const setConcursos = (updater) => setShared(s => ({ ...s, concursos: typeof updater === 'function' ? updater(s.concursos) : updater }));
+
+  const handleAddSimulado = (sim) => {
+    setShared(s => {
+      const sims = [...(s.simulados || []), sim];
+      const xpGain = (window.DA.simuladoXp ? window.DA.simuladoXp(sim) : 10);
+      return { ...s, simulados: sims, xp: (s.xp || 0) + xpGain };
+    });
+    window.celebrateHighEnergy && window.celebrateHighEnergy();
+  };
+  const handleRemoveSimulado = (id) => {
+    setShared(s => ({ ...s, simulados: (s.simulados || []).filter(x => x.id !== id) }));
+  };
   const handleRestore = (backup) => {
     setShared(backup.shared); setObjState(backup.objetiva); setDiscState(backup.discursiva);
     prevPetStageRef.current = window.DA.getPetStage(backup.shared.xp || 0);
@@ -644,6 +659,7 @@ function App() {
   const TABS = [
     { id: 'hoje',         label: 'HOJE',         icon: '🏠' },
     { id: 'edital',       label: 'EDITAL',       icon: '📋' },
+    { id: 'simulados',    label: 'SIMULADOS',    icon: '🎯' },
     { id: 'estatisticas', label: 'ESTATÍSTICAS', icon: '📊' },
     { id: 'historico',    label: 'HISTÓRICO',    icon: '📜' },
     { id: 'ajustes',      label: 'AJUSTES',      icon: '⚙️' },
@@ -793,6 +809,18 @@ function App() {
           </>
         )}
 
+        {/* ── ABA: SIMULADOS ── */}
+        {activeTab === 'simulados' && (
+          <SimuladosTab
+            shared={shared}
+            objState={objState}
+            discState={discState}
+            mode={mode}
+            onAddSimulado={handleAddSimulado}
+            onRemoveSimulado={handleRemoveSimulado}
+          />
+        )}
+
         {/* ── ABA: ESTATÍSTICAS ── */}
         {activeTab === 'estatisticas' && (
           <StatsPage shared={shared} objState={objState} discState={discState} />
@@ -837,8 +865,16 @@ function App() {
       </main>
 
       <QuickLogFAB onOpenSessionLog={() => setSessionLogOpen(true)} onOpenPomodoro={() => setPomodoroOpen(true)} />
-      <SessionLogModal open={sessionLogOpen} subjects={combinedSubjects} onSave={handleEnrichedLog}
-        onClose={() => setSessionLogOpen(false)}
+      <SessionLogModal open={sessionLogOpen} subjects={combinedSubjects}
+        initial={pomodoroPrefill ? pomodoroPrefill.initial : undefined}
+        onSave={(log) => {
+          const fromPomo = !!pomodoroPrefill;
+          const noXp = fromPomo && pomodoroPrefill.awardXp === false;
+          const bonusXp = (fromPomo && pomodoroPrefill.awardXp === true) ? 5 : 0;
+          handleEnrichedLog(log, { noXp, bonusXp });
+          setPomodoroPrefill(null);
+        }}
+        onClose={() => { setSessionLogOpen(false); setPomodoroPrefill(null); }}
         customStudyTypes={shared.customStudyTypes || []}
         onAddCustomStudyType={handleAddCustomStudyType} />
       <SessionLogModal open={!!editTarget} subjects={combinedSubjects}
@@ -851,7 +887,19 @@ function App() {
         subjects={combinedSubjects.length ? combinedSubjects : objState.subjects}
         customStudyTypes={shared.customStudyTypes || []}
         onAddCustomStudyType={handleAddCustomStudyType}
-        onCompleteSession={handleSession} />
+        onCompleteSession={handleSession}
+        onOpenFullLog={({ durationMin, discipline, awardXp }) => {
+          const totalMin = Math.max(0, Math.round(durationMin || 0));
+          const initial = {
+            date: new Date().toISOString().slice(0,10),
+            discipline: discipline || '',
+            hours: totalMin / 60,
+            source: awardXp ? 'pomodoro' : 'pomodoro-early',
+          };
+          setPomodoroPrefill({ initial, awardXp: !!awardXp });
+          setPomodoroOpen(false);
+          setSessionLogOpen(true);
+        }} />
       <GoalsModal open={goalsOpen} goals={shared.goals} onSave={handleSaveGoals} onClose={() => setGoalsOpen(false)} />
 
       {showOnboarding && <OnboardingModal onDone={() => setShowOnboarding(false)} />}

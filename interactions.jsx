@@ -44,26 +44,25 @@ const STUDY_TYPES_POM = [
   'Revisão', 'Mapa mental', 'Aula', 'Simulado',
 ];
 
-function PomodoroModal({ open, onClose, subjects, onCompleteSession, customStudyTypes = [], onAddCustomStudyType }) {
-  const [phase, setPhase] = React.useState('pick');     // pick | running | done
+function PomodoroModal({ open, onClose, subjects, onCompleteSession, onOpenFullLog, customStudyTypes = [], onAddCustomStudyType }) {
+  const [phase, setPhase] = React.useState('pick');     // pick | running | finished
   const [mode, setMode]   = React.useState('timer');    // timer | chrono
   const [mins, setMins]   = React.useState(45);
   const [subjectId, setSubjectId] = React.useState(subjects[0]?.id || '');
   const [secsLeft, setSecsLeft]   = React.useState(45 * 60);
   const [secsElapsed, setSecsElapsed] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
-
-  // Done-phase form fields
-  const [doneDiscipline, setDoneDiscipline] = React.useState('');
-  const [doneStudyType, setDoneStudyType]   = React.useState('');
-  const [doneNote, setDoneNote]             = React.useState('');
-  const [doneMins, setDoneMins]             = React.useState(0);
+  const [pauseSecs, setPauseSecs] = React.useState(0); // seconds since last pause
+  const [distractionAlert, setDistractionAlert] = React.useState(false);
+  const [naturallyFinished, setNaturallyFinished] = React.useState(false);
 
   const totalSecs = mins * 60;
 
   // Wall-clock anchored ticking — avoids setTimeout drift, survives tab throttling.
   const startAtRef = React.useRef(null);   // ms timestamp of current run-segment start
   const accumMsRef = React.useRef(0);      // accumulated ms across pauses
+  const pauseStartRef = React.useRef(null);
+  const alertedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (phase !== 'running' || paused) return;
@@ -76,9 +75,10 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession, customStudy
         if (left <= 0) {
           setSecsLeft(0);
           accumMsRef.current = totalSecs * 1000;
-          setDoneMins(mins);
-          setPhase('done');
+          setNaturallyFinished(true);
+          setPhase('finished');
           window.celebrateVictory && window.celebrateVictory();
+          window.playTimerEnd && window.playTimerEnd();
         } else {
           setSecsLeft(left);
         }
@@ -94,6 +94,27 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession, customStudy
     };
   }, [phase, paused, mode, totalSecs, mins]);
 
+  // Distraction watchdog: while paused, count seconds and alert at 5min
+  React.useEffect(() => {
+    if (phase !== 'running' || !paused) {
+      pauseStartRef.current = null;
+      alertedRef.current = false;
+      setPauseSecs(0);
+      return;
+    }
+    pauseStartRef.current = Date.now();
+    const id = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - pauseStartRef.current) / 1000);
+      setPauseSecs(elapsed);
+      if (elapsed >= 300 && !alertedRef.current) {
+        alertedRef.current = true;
+        setDistractionAlert(true);
+        window.playEmergency && window.playEmergency();
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [phase, paused]);
+
   React.useEffect(() => {
     if (open) {
       setPhase('pick');
@@ -101,13 +122,15 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession, customStudy
       setSecsLeft(mins * 60);
       setSecsElapsed(0);
       setPaused(false);
+      setPauseSecs(0);
+      setDistractionAlert(false);
+      setNaturallyFinished(false);
       accumMsRef.current = 0;
       startAtRef.current = null;
+      pauseStartRef.current = null;
+      alertedRef.current = false;
       const firstSubj = subjects[0];
       setSubjectId(firstSubj?.id || '');
-      setDoneDiscipline(firstSubj?.name || '');
-      setDoneStudyType('');
-      setDoneNote('');
     }
   }, [open]);
 
@@ -118,39 +141,38 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession, customStudy
     if (mode === 'chrono') setSecsElapsed(0);
     setPaused(false);
     setPhase('running');
-    const subj = subjects.find(s => s.id === subjectId);
-    if (subj) setDoneDiscipline(subj.name);
+    setNaturallyFinished(false);
   };
 
-  const finalize = () => {
+  // Manually finalize (early exit). No XP — only natural timer completion awards XP.
+  const finalizeEarly = () => {
     const elapsedMs = accumMsRef.current + (startAtRef.current && !paused ? (Date.now() - startAtRef.current) : 0);
     const elapsedSecs = Math.floor(elapsedMs / 1000);
     const elapsedMins = mode === 'timer'
       ? Math.max(1, Math.round(Math.min(mins * 60, elapsedSecs) / 60))
       : Math.max(1, Math.round(elapsedSecs / 60));
-    setDoneMins(elapsedMins);
-    setPhase('done');
+    setNaturallyFinished(mode === 'chrono'); // chrono is open-ended → still counts as completed
+    setPhase('finished');
   };
 
-  const allStudyTypes = [...STUDY_TYPES_POM, ...customStudyTypes];
-  const handleAddCustom = () => {
-    const name = window.prompt('Novo tipo de estudo:');
-    if (!name) return;
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    if (!allStudyTypes.includes(trimmed) && onAddCustomStudyType) onAddCustomStudyType(trimmed);
-    setDoneStudyType(trimmed);
-  };
-
-  const saveAndClose = () => {
-    onCompleteSession({
-      minutes: doneMins,
-      subjectId,
-      discipline: doneDiscipline || undefined,
-      studyType: doneStudyType || undefined,
-      note: doneNote.trim() || undefined,
-    });
+  // Open the full SessionLogModal carrying the timed duration in.
+  const openFullForm = () => {
+    const elapsedMs = accumMsRef.current + (startAtRef.current && !paused && phase === 'running' ? (Date.now() - startAtRef.current) : 0);
+    const elapsedSecs = Math.floor(elapsedMs / 1000);
+    const durationMin = mode === 'timer'
+      ? Math.max(1, Math.round(Math.min(totalSecs, elapsedSecs) / 60))
+      : Math.max(1, Math.round(elapsedSecs / 60));
+    const subj = subjects.find(s => s.id === subjectId);
+    const awardXp = !!naturallyFinished;
     onClose();
+    if (onOpenFullLog) {
+      onOpenFullLog({
+        durationMin,
+        discipline: subj?.name || '',
+        awardXp,
+        source: awardXp ? 'pomodoro' : 'pomodoro-early',
+      });
+    }
   };
 
   if (!open) return null;
@@ -160,16 +182,6 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession, customStudy
   const showH = Math.floor(showSecs / 3600);
   const showM = Math.floor((showSecs % 3600) / 60);
   const showS = showSecs % 60;
-
-  const inputStyle = {
-    width: '100%', boxSizing: 'border-box',
-    padding: '9px 12px', borderRadius: 9,
-    border: '1px solid rgba(42,45,58,0.13)',
-    background: 'rgba(255,255,255,0.75)',
-    fontSize: 13, color: 'var(--grafite)',
-    fontFamily: 'inherit', outline: 'none',
-  };
-  const labelStyle = { fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5, display: 'block' };
 
   return (
     <div style={{
@@ -265,78 +277,121 @@ function PomodoroModal({ open, onClose, subjects, onCompleteSession, customStudy
                 )}
               </svg>
               <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-                <div className="num" style={{ fontSize: showH > 0 ? 38 : 50, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                <div className="num" style={{ fontSize: showH > 0 ? 38 : 50, fontWeight: 700, letterSpacing: '-0.02em', color: paused ? 'var(--coral)' : 'var(--text-primary)' }}>
                   {showH > 0 && <>{String(showH).padStart(2,'0')}<span style={{ color: 'var(--text-dim)' }}>:</span></>}
                   {String(showM).padStart(2,'0')}<span style={{ color: 'var(--text-dim)' }}>:</span>{String(showS).padStart(2,'0')}
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+            {paused && (
+              <div style={{
+                marginTop: 14, padding: '8px 12px', borderRadius: 10,
+                background: pauseSecs >= 240 ? 'rgba(232,93,93,0.10)' : 'rgba(245,158,11,0.10)',
+                border: `1px solid ${pauseSecs >= 240 ? 'rgba(232,93,93,0.40)' : 'rgba(245,158,11,0.35)'}`,
+                fontSize: 12, color: pauseSecs >= 240 ? 'var(--coral)' : 'var(--ambar)',
+                fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+              }}>
+                ⏸ Pausado há {Math.floor(pauseSecs/60)}min {String(pauseSecs%60).padStart(2,'0')}s
+                {pauseSecs >= 240 && pauseSecs < 300 && <span> · alerta em {300 - pauseSecs}s</span>}
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+              {mode === 'timer'
+                ? 'XP só é concedido se o timer for finalizado naturalmente.'
+                : 'Modo cronômetro: registre quando quiser. Sem XP automático.'}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <button className="btn-ghost" onClick={() => setPaused(p => !p)}>
                 {paused ? <I.play size={12} /> : <I.pause size={12} />} {paused ? 'Continuar' : 'Pausar'}
               </button>
-              <button className="btn-ghost" onClick={finalize}>Finalizar</button>
+              <button className="btn-ghost" onClick={finalizeEarly}
+                style={{ borderColor: 'rgba(232,93,93,0.3)', color: 'var(--coral)' }}>
+                Encerrar antes
+              </button>
             </div>
           </div>
         )}
 
-        {phase === 'done' && (
-          <div>
-            <div style={{ textAlign: 'center', padding: '8px 0 16px' }}>
-              <div style={{ fontSize: 44, marginBottom: 6 }}>🛡</div>
-              <div className="font-display gradient-neon" style={{ fontSize: 22, fontWeight: 700 }}>Sessão concluída!</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                {doneMins} minutos · +{2 + (doneMins >= 90 ? 0 : 0)} XP base
-              </div>
+        {phase === 'finished' && (
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <div style={{ fontSize: 48, marginBottom: 6 }}>{naturallyFinished ? '🏆' : '🛡'}</div>
+            <div className="font-display gradient-neon" style={{ fontSize: 22, fontWeight: 700 }}>
+              {naturallyFinished ? 'Timer concluído!' : 'Sessão encerrada'}
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Disciplina</label>
-                <select value={doneDiscipline} onChange={e => setDoneDiscipline(e.target.value)} style={inputStyle}>
-                  <option value="">— Selecione —</option>
-                  {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Tipo de estudo</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {allStudyTypes.map(t => (
-                    <button key={t} onClick={() => setDoneStudyType(doneStudyType === t ? '' : t)}
-                      className={doneStudyType === t ? 'btn-neon' : 'btn-ghost'}
-                      style={{ fontSize: 11, padding: '4px 10px',
-                        ...(doneStudyType === t ? { background: 'var(--petroleo)', borderColor: 'transparent', color: 'white' } : {}) }}>
-                      {t}
-                    </button>
-                  ))}
-                  <button onClick={handleAddCustom} className="btn-ghost"
-                    style={{ fontSize: 11, padding: '4px 10px', borderStyle: 'dashed' }}>
-                    + Outro
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Observação (opcional)</label>
-                <textarea placeholder="Tópicos, dificuldades, destaques…"
-                  value={doneNote} onChange={e => setDoneNote(e.target.value)}
-                  rows={2}
-                  style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} />
-              </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+              {naturallyFinished
+                ? 'Excelente foco. Registre o que estudou pra coletar o XP da sessão.'
+                : 'Sem XP automático (timer não foi até o fim). Você ainda pode registrar a sessão.'}
             </div>
-
-            <button onClick={saveAndClose} className="btn-neon" style={{
+            <button onClick={openFullForm} className="btn-neon" style={{
               width: '100%', justifyContent: 'center', marginTop: 18,
               padding: '12px', fontSize: 14,
               background: 'linear-gradient(135deg, var(--petroleo), var(--ciano))',
               borderColor: 'transparent', color: 'white',
             }}>
-              Salvar sessão e coletar XP
+              ✏️ Abrir registro completo (tema, questões, acertos, erros)
+            </button>
+            <button onClick={onClose} className="btn-ghost" style={{ marginTop: 8, fontSize: 12 }}>
+              Fechar sem registrar
             </button>
           </div>
         )}
       </div>
+
+      {/* Distraction alert overlay */}
+      {distractionAlert && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position: 'fixed', inset: 0, zIndex: 110,
+          background: 'radial-gradient(ellipse at center, rgba(220,38,38,0.55), rgba(60,10,10,0.85))',
+          backdropFilter: 'blur(6px)',
+          display: 'grid', placeItems: 'center', padding: 24,
+          animation: 'distraction-flash 1.2s ease-in-out infinite',
+        }}>
+          <style>{`
+            @keyframes distraction-flash {
+              0%, 100% { background: radial-gradient(ellipse at center, rgba(220,38,38,0.55), rgba(60,10,10,0.85)); }
+              50%      { background: radial-gradient(ellipse at center, rgba(248,113,113,0.75), rgba(120,20,20,0.95)); }
+            }
+            @keyframes distraction-pulse {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.05); }
+            }
+          `}</style>
+          <div style={{
+            maxWidth: 460, padding: '32px 28px',
+            background: 'rgba(255,255,255,0.96)', borderRadius: 20,
+            border: '2px solid #DC2626',
+            boxShadow: '0 0 0 6px rgba(220,38,38,0.45), 0 24px 80px rgba(120,20,20,0.45)',
+            textAlign: 'center',
+            animation: 'distraction-pulse 1.2s ease-in-out infinite',
+          }}>
+            <div style={{ fontSize: 64, marginBottom: 12 }}>🚨</div>
+            <div style={{ fontSize: 11, letterSpacing: '0.28em', color: '#B91C1C', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, marginBottom: 6 }}>
+              ALERTA DISTRAÇÃO
+            </div>
+            <div className="font-display" style={{ fontSize: 22, fontWeight: 800, color: '#7F1D1D', lineHeight: 1.25, marginBottom: 8 }}>
+              Volte a estudar!
+            </div>
+            <div style={{ fontSize: 14, color: '#7F1D1D', lineHeight: 1.5, fontWeight: 600 }}>
+              A realização do seu sonho depende disso!
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 18, flexWrap: 'wrap' }}>
+              <button onClick={() => { setDistractionAlert(false); setPaused(false); }}
+                className="btn-neon" style={{
+                  padding: '12px 22px', fontSize: 14,
+                  background: 'linear-gradient(135deg, #DC2626, #7F1D1D)',
+                  borderColor: 'transparent', color: 'white',
+                  boxShadow: '0 8px 24px rgba(220,38,38,0.45)',
+                }}>
+                ▶ Retomar agora
+              </button>
+              <button onClick={() => setDistractionAlert(false)} className="btn-ghost" style={{ fontSize: 12 }}>
+                Continuar pausado
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

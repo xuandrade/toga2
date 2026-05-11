@@ -515,6 +515,7 @@ const INITIAL_SHARED = {
   bestStreak: 0,
   shields: 0,
   dailyLogs: [],
+  simulados: [],
   goals: { dailyHours: 4, weeklyHours: 28, dailyQuestions: 40, weeklyQuestions: 250, dailyFlashcards: 30 },
   xp: 0,
   achievements: [],
@@ -712,6 +713,44 @@ function calcConstanciaRecord(dailyLogs) {
   return best;
 }
 
+// ── Simulado totals ──
+function simuladoTotals(sim) {
+  const rows = (sim && sim.disciplinas) || [];
+  let questions = 0, correct = 0, wrong = 0;
+  rows.forEach(r => {
+    questions += Number(r.questions) || 0;
+    correct   += Number(r.correct)   || 0;
+    wrong     += Number(r.wrong)     || 0;
+  });
+  const accuracy = questions > 0 ? (correct / questions) * 100 : 0;
+  return { questions, correct, wrong, accuracy };
+}
+
+// XP awarded for a completed simulado
+function simuladoXp(sim) {
+  const t = simuladoTotals(sim);
+  if (t.questions === 0) return 10;
+  return Math.min(120, 10 + t.correct);
+}
+
+// Aggregate accuracy combining dailyLogs and simulados.
+// dailyLogs already store correct/wrong per entry; simulados store per-disciplina.
+function aggregateAcertos(shared) {
+  let correct = 0, wrong = 0;
+  (shared.dailyLogs || []).forEach(l => {
+    const ents = (l.entries && l.entries.length > 0) ? l.entries : [l];
+    ents.forEach(e => { correct += e.correct || 0; wrong += e.wrong || 0; });
+  });
+  (shared.simulados || []).forEach(sim => {
+    const t = simuladoTotals(sim);
+    correct += t.correct;
+    wrong   += t.wrong;
+  });
+  const total = correct + wrong;
+  const pct = total > 0 ? (correct / total) * 100 : 0;
+  return { correct, wrong, total, pct };
+}
+
 window.DA = {
   INITIAL_SHARED, INITIAL_OBJETIVA, INITIAL_DISCURSIVA,
   getSubjectCompletionObj, getSubjectCompletionDisc,
@@ -720,4 +759,5 @@ window.DA = {
   PET_STAGES, getPetStageInfo,
   daysSinceLastStudy, studied2DaysInRow, nextPetHealth,
   CONSTANCIA_HOURS_MIN, firstLogDate, calcConstancia, calcConstanciaRecord,
+  simuladoTotals, simuladoXp, aggregateAcertos,
 };

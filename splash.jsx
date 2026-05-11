@@ -184,6 +184,36 @@ setTimeout(() => playChord([1174.66, 1480, 1760], 0.45, 'sine', 0.13), 100);
 setTimeout(() => playChord([2349.32, 2637.02], 0.3, 'sine', 0.08), 240);
 }
 
+// Emergency alarm — three urgent beeps with siren-like sweep (for distraction alert)
+function playEmergency() {
+  const ctx = getCtx(); if (!ctx) return;
+  const burst = (delay) => {
+    setTimeout(() => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(880, ctx.currentTime);
+      o.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.18);
+      o.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.36);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.36);
+      o.connect(g); g.connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + 0.4);
+    }, delay);
+  };
+  burst(0); burst(450); burst(900);
+}
+
+// Timer end — pleasant chime sequence (when modo blindado completes naturally)
+function playTimerEnd() {
+  const ctx = getCtx(); if (!ctx) return;
+  const seq = [1046.5, 1318.5, 1567.98, 2093.0];
+  seq.forEach((f, i) => setTimeout(() => playChord([f], 0.4, 'triangle', 0.17), i * 130));
+  setTimeout(() => playChord([2093.0, 2637.02], 0.7, 'sine', 0.12), seq.length * 130);
+}
+
 // ===== Confetti =====
 function spawnConfetti({ count = 30, colors = ['#00b8d4', '#5B47B8'], spread = 90, velocity = 5, gravity = true, shapes = ['square'] }) {
 const root = document.getElementById('confetti-root');
@@ -220,6 +250,8 @@ window.playHealed = playHealed;
 window.playBlip = playBlip;
 window.playCheckChime = playCheckChime;
 window.playTopicMastered = playTopicMastered;
+window.playEmergency = playEmergency;
+window.playTimerEnd = playTimerEnd;
 window.celebrateLight = function() { spawnConfetti({ count: 14, colors: ['#00b8d4', '#5B47B8'], spread: 90, shapes: ['square'] }); playLight(); };
 window.celebrateHighEnergy = function() {
 spawnConfetti({ count: 70, colors: ['#00b8d4', '#5B47B8', '#C9A961', '#00A86B', '#E85D5D'], spread: 280, velocity: 7, shapes: ['square', 'circle', 'star'] });
