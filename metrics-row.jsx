@@ -14,10 +14,18 @@ function incentiveFor(progress) {
 
 // ── MetricsRow: 4 metric cards ──
 function MetricsRow({ shared, setShared }) {
-  const today = shared.dailyLogs[shared.dailyLogs.length - 1] || { hours: 0, questions: 0, reviews: 0 };
-  const last7 = shared.dailyLogs.slice(-7);
-  const weekHours = last7.reduce((a, d) => a + d.hours, 0);
-  const weekQ = last7.reduce((a, d) => a + d.questions, 0);
+  const nowDate = new Date(); nowDate.setHours(0,0,0,0);
+  const todayISO = nowDate.toISOString().slice(0,10);
+  const daysFromMonday = nowDate.getDay() === 0 ? 6 : nowDate.getDay() - 1;
+  const weekStart = new Date(nowDate - daysFromMonday * 86400000);
+
+  const today = shared.dailyLogs.find(l => l.date === todayISO) || { hours: 0, questions: 0, reviews: 0 };
+  const thisWeekLogs = shared.dailyLogs.filter(l => {
+    const d = new Date(l.date + 'T00:00:00');
+    return d >= weekStart && d <= nowDate;
+  });
+  const weekHours = thisWeekLogs.reduce((a, d) => a + d.hours, 0);
+  const weekQ = thisWeekLogs.reduce((a, d) => a + d.questions, 0);
 
   const metrics = [
     { label: 'Horas hoje',       value: today.hours.toFixed(1), goal: shared.goals.dailyHours,    unit: 'h',  color: '#00b8d4',       colorRaw: '#00b8d4',  glow: '#00d9ff', icon: <I.clock   size={13} /> },
