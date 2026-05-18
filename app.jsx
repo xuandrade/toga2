@@ -621,6 +621,7 @@ function App() {
   const handleCheckXp = (delta) => setShared(s => ({ ...s, xp: Math.max(0, s.xp + delta) }));
 
   const setConcursos = (updater) => setShared(s => ({ ...s, concursos: typeof updater === 'function' ? updater(s.concursos) : updater }));
+  const setHistoricoProvas = (updater) => setShared(s => ({ ...s, historicoProvas: typeof updater === 'function' ? updater(s.historicoProvas || []) : updater }));
 
   const handleAddSimulado = (sim) => {
     setShared(s => {
@@ -657,12 +658,13 @@ function App() {
   const isSick = shared.petHealth === 'sick';
 
   const TABS = [
-    { id: 'hoje',         label: 'HOJE',         icon: '🏠' },
-    { id: 'edital',       label: 'EDITAL',       icon: '📋' },
-    { id: 'simulados',    label: 'SIMULADOS',    icon: '🎯' },
-    { id: 'estatisticas', label: 'ESTATÍSTICAS', icon: '📊' },
-    { id: 'historico',    label: 'HISTÓRICO',    icon: '📜' },
-    { id: 'ajustes',      label: 'AJUSTES',      icon: '⚙️' },
+    { id: 'hoje',         label: 'HOJE',                      icon: '🏠' },
+    { id: 'edital',       label: 'EDITAL',                    icon: '📋' },
+    { id: 'simulados',    label: 'SIMULADOS',                 icon: '🎯' },
+    { id: 'concursos',    label: 'DESEMPENHO EM CONCURSOS',   icon: '🏆', shortLabel: 'CONCURSOS' },
+    { id: 'estatisticas', label: 'ESTATÍSTICAS',              icon: '📊' },
+    { id: 'historico',    label: 'HISTÓRICO',                 icon: '📜' },
+    { id: 'ajustes',      label: 'AJUSTES',                   icon: '⚙️' },
   ];
 
   return (
@@ -681,7 +683,7 @@ function App() {
           <button key={tab.id} className={`nav-tab ${activeTab === tab.id ? 'nav-tab-active' : ''}`}
             onClick={() => setActiveTab(tab.id)}>
             <span className="nav-tab-icon">{tab.icon}</span>
-            <span>{tab.label}</span>
+            <span style={tab.shortLabel ? { whiteSpace: 'normal', lineHeight: 1.25, fontSize: 10.5 } : undefined}>{tab.label}</span>
           </button>
         ))}
       </nav>
@@ -692,7 +694,7 @@ function App() {
           <button key={tab.id} className={`nav-tab ${activeTab === tab.id ? 'nav-tab-active' : ''}`}
             onClick={() => setActiveTab(tab.id)}>
             <span className="nav-tab-icon">{tab.icon}</span>
-            <span>{tab.label}</span>
+            <span>{tab.shortLabel || tab.label}</span>
           </button>
         ))}
       </nav>
@@ -835,6 +837,20 @@ function App() {
             mode={mode}
             onAddSimulado={handleAddSimulado}
             onRemoveSimulado={handleRemoveSimulado}
+          />
+        )}
+
+        {/* ── ABA: DESEMPENHO EM CONCURSOS ── */}
+        {activeTab === 'concursos' && (
+          <ConcursosDesempenhoTab
+            provas={shared.historicoProvas || []}
+            setProvas={setHistoricoProvas}
+            onXpGain={(amount, kind) => {
+              setShared(s => ({ ...s, xp: (s.xp || 0) + amount }));
+              if (kind === 'victory') window.celebrateVictory && window.celebrateVictory();
+              else if (kind === 'high') window.celebrateHighEnergy && window.celebrateHighEnergy();
+              else if (amount > 0) window.celebrateLight && window.celebrateLight();
+            }}
           />
         )}
 

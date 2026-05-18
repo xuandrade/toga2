@@ -522,6 +522,7 @@ const INITIAL_SHARED = {
   petStage: 0,
   petHealth: 'healthy',
   concursos: [],
+  historicoProvas: [],
 };
 
 const INITIAL_OBJETIVA  = { subjects: INITIAL_SUBJECTS_OBJ,  heatmap: {} };
