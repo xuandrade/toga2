@@ -720,7 +720,7 @@ function App() {
                   </div>
                 </div>
                 <DailyPhrase />
-                <PetCompanion xp={shared.xp} sick={isSick} dailyLogs={shared.dailyLogs} />
+                <FoxEvolutionPanel xp={shared.xp} sick={isSick} dailyLogs={shared.dailyLogs} streak={shared.streak} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -842,19 +842,16 @@ function App() {
 
         {/* ── ABA: DESEMPENHO EM CONCURSOS ── */}
         {activeTab === 'concursos' && (
-          <>
-            <FoxEvolutionPanel xp={shared.xp} />
-            <ConcursosDesempenhoTab
-              provas={shared.historicoProvas || []}
-              setProvas={setHistoricoProvas}
-              onXpGain={(amount, kind) => {
-                setShared(s => ({ ...s, xp: (s.xp || 0) + amount }));
-                if (kind === 'victory') window.celebrateVictory && window.celebrateVictory();
-                else if (kind === 'high') window.celebrateHighEnergy && window.celebrateHighEnergy();
-                else if (amount > 0) window.celebrateLight && window.celebrateLight();
-              }}
-            />
-          </>
+          <ConcursosDesempenhoTab
+            provas={shared.historicoProvas || []}
+            setProvas={setHistoricoProvas}
+            onXpGain={(amount, kind) => {
+              setShared(s => ({ ...s, xp: (s.xp || 0) + amount }));
+              if (kind === 'victory') window.celebrateVictory && window.celebrateVictory();
+              else if (kind === 'high') window.celebrateHighEnergy && window.celebrateHighEnergy();
+              else if (amount > 0) window.celebrateLight && window.celebrateLight();
+            }}
+          />
         )}
 
         {/* ── ABA: ESTATÍSTICAS ── */}
