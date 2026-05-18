@@ -179,6 +179,136 @@ function ActivityCurve({ logs }) {
   );
 }
 
+// ── PieChart: animated SVG pie/donut with legend ──
+function PieChart({ data, size = 180, donut = true, formatValue }) {
+  const { useState: useSt, useEffect: useEf } = React;
+  const [hover, setHover] = useSt(null);
+  const [progress, setProgress] = useSt(0);
+  useEf(() => {
+    let raf, t0 = performance.now();
+    const DURATION = 700;
+    const tick = (t) => {
+      const p = Math.min(1, (t - t0) / DURATION);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setProgress(eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [JSON.stringify(data.map(d => [d.label, d.value]))]);
+
+  const total = data.reduce((a, d) => a + d.value, 0);
+  if (total <= 0) return (
+    <div style={{ fontSize: 12, color: 'var(--text-dim)', padding: '8px 0' }}>
+      Sem dados para exibir.
+    </div>
+  );
+
+  const R = size / 2;
+  const innerR = donut ? R * 0.58 : 0;
+  const cx = R, cy = R;
+
+  let acc = 0;
+  const slices = data.map((d, i) => {
+    const start = acc / total;
+    acc += d.value;
+    const end = acc / total;
+    return { ...d, start, end, i };
+  });
+
+  const arcPath = (start, end) => {
+    const a0 = start * Math.PI * 2 - Math.PI / 2;
+    const a1 = end * Math.PI * 2 - Math.PI / 2;
+    const large = end - start > 0.5 ? 1 : 0;
+    const x0 = cx + R * Math.cos(a0), y0 = cy + R * Math.sin(a0);
+    const x1 = cx + R * Math.cos(a1), y1 = cy + R * Math.sin(a1);
+    if (donut) {
+      const ix0 = cx + innerR * Math.cos(a0), iy0 = cy + innerR * Math.sin(a0);
+      const ix1 = cx + innerR * Math.cos(a1), iy1 = cy + innerR * Math.sin(a1);
+      return `M ${x0} ${y0} A ${R} ${R} 0 ${large} 1 ${x1} ${y1} L ${ix1} ${iy1} A ${innerR} ${innerR} 0 ${large} 0 ${ix0} ${iy0} Z`;
+    }
+    return `M ${cx} ${cy} L ${x0} ${y0} A ${R} ${R} 0 ${large} 1 ${x1} ${y1} Z`;
+  };
+
+  // Animated visible slice end (sweep with progress 0..1)
+  const visEnd = (s) => Math.min(s.end, progress);
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+      <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {slices.map(s => {
+            if (s.start >= progress) return null;
+            const isHover = hover === s.i;
+            const path = arcPath(s.start, visEnd(s));
+            return (
+              <path key={s.label} d={path} fill={s.color}
+                stroke="white" strokeWidth="2"
+                onMouseEnter={() => setHover(s.i)}
+                onMouseLeave={() => setHover(null)}
+                style={{
+                  cursor: 'pointer',
+                  transform: isHover ? 'scale(1.04)' : 'scale(1)',
+                  transformOrigin: `${cx}px ${cy}px`,
+                  transition: 'transform 180ms cubic-bezier(0.16,1,0.3,1)',
+                  filter: isHover ? `drop-shadow(0 4px 14px ${s.color}88)` : 'none',
+                }}
+              />
+            );
+          })}
+        </svg>
+        {donut && hover !== null && (() => {
+          const s = slices[hover];
+          const pct = (s.value / total) * 100;
+          return (
+            <div style={{
+              position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
+              textAlign: 'center', pointerEvents: 'none',
+            }}>
+              <div>
+                <div className="num" style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: '-0.02em' }}>
+                  {pct.toFixed(0)}<span style={{ fontSize: 12, opacity: 0.7 }}>%</span>
+                </div>
+                <div style={{ fontSize: 9.5, letterSpacing: '0.14em', color: 'var(--text-muted)', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', marginTop: 2, maxWidth: size * 0.6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.label}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 130, flex: '1 1 130px' }}>
+        {slices.map(s => {
+          const pct = (s.value / total) * 100;
+          const isHover = hover === s.i;
+          return (
+            <div key={s.label}
+              onMouseEnter={() => setHover(s.i)}
+              onMouseLeave={() => setHover(null)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5,
+                padding: '4px 8px', borderRadius: 7,
+                background: isHover ? `${s.color}14` : 'transparent',
+                transition: 'background 160ms ease', cursor: 'pointer',
+              }}>
+              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0, boxShadow: `0 0 6px ${s.color}66` }} />
+              <span style={{ flex: 1, minWidth: 0, color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.label}
+              </span>
+              <span className="num" style={{ color: s.color, fontWeight: 800, fontSize: 11.5 }}>
+                {formatValue ? formatValue(s.value) : s.value.toFixed(1)}
+              </span>
+              <span className="num" style={{ color: 'var(--text-dim)', fontSize: 10.5, fontWeight: 700, minWidth: 36, textAlign: 'right' }}>
+                {pct.toFixed(0)}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function StatsPage({ shared, objState, discState }) {
   const logs = shared.dailyLogs || [];
   const { useState: useSt } = React;
@@ -225,6 +355,20 @@ function StatsPage({ shared, objState, discState }) {
     hoursByType[e.studyType] = (hoursByType[e.studyType] || 0) + e.hours;
   });
   const hoursByTypeArr = Object.entries(hoursByType).sort((a,b) => b[1]-a[1]);
+
+  // Peso por disciplina (combinando objetiva + discursiva por nome)
+  const weightByDisc = {};
+  [...objState.subjects, ...discState.subjects].forEach(s => {
+    if (!s || !s.name) return;
+    const w = Math.max(0, s.weight || 0);
+    if (w <= 0) return;
+    weightByDisc[s.name] = Math.max(weightByDisc[s.name] || 0, w);
+  });
+  const weightByDiscArr = Object.entries(weightByDisc).sort((a,b) => b[1]-a[1]);
+  const totalWeight = weightByDiscArr.reduce((a,[,w]) => a + w, 0);
+
+  // Total horas (de entries com disciplina) para % no chart de horas por disciplina
+  const totalHoursByDisc = hoursByDiscArr.reduce((a, [, h]) => a + h, 0);
 
   // Accuracy per discipline (questions entries)
   const accByDisc = {};
@@ -382,45 +526,72 @@ function StatsPage({ shared, objState, discState }) {
         {/* % de Constância */}
         <ConstanciaPercentCard logs={logs} bestStreak={shared.bestStreak} />
 
-        {/* % Edital — Objetiva vs Discursiva (independente) */}
-        <EditalIndependenteCard objState={objState} discState={discState} />
-
       </div>
 
-      {/* Charts grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
-
-        {/* Chart 2 — Horas por disciplina */}
+      {/* Horas por disciplina (com %) lado a lado com Peso por disciplina (pizza) */}
+      <div className="stats-dual-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
         <div className="glass" style={{ padding: 16 }}>
           <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 10, fontFamily: 'JetBrains Mono, monospace' }}>HORAS POR DISCIPLINA</div>
           {hoursByDiscArr.length === 0
             ? <div style={{ fontSize: 12, color: 'var(--text-dim)', padding: '8px 0' }}>Registre sessões com disciplina para ver este gráfico.</div>
-            : hoursByDiscArr.map(([d, h], i) => (
-              <div key={d} style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{d.length > 18 ? d.slice(0,16)+'…' : d}</span>
-                  <span className="num" style={{ color: COLORS[i % COLORS.length], fontWeight: 700 }}>{h.toFixed(1)}h</span>
+            : hoursByDiscArr.map(([d, h], i) => {
+              const pct = totalHoursByDisc > 0 ? (h / totalHoursByDisc) * 100 : 0;
+              const color = COLORS[i % COLORS.length];
+              return (
+                <div key={d} style={{ marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3, gap: 6 }}>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {d.length > 22 ? d.slice(0,20)+'…' : d}
+                    </span>
+                    <span className="num" style={{ color, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      {h.toFixed(1)}h <span style={{ color: 'var(--text-dim)', fontWeight: 700, fontSize: 10 }}>({pct.toFixed(0)}%)</span>
+                    </span>
+                  </div>
+                  <Bar pct={h / hoursByDiscArr[0][1] * 100} color={color} />
                 </div>
-                <Bar pct={h / hoursByDiscArr[0][1] * 100} color={COLORS[i % COLORS.length]} />
-              </div>
-            ))
+              );
+            })
           }
         </div>
 
-        {/* Chart 3 — Horas por tipo de estudo */}
         <div className="glass" style={{ padding: 16 }}>
-          <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 10, fontFamily: 'JetBrains Mono, monospace' }}>HORAS POR TIPO DE ESTUDO</div>
+          <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 12, fontFamily: 'JetBrains Mono, monospace' }}>PESO POR DISCIPLINA · EDITAL</div>
+          {weightByDiscArr.length === 0
+            ? <div style={{ fontSize: 12, color: 'var(--text-dim)', padding: '8px 0' }}>Defina pesos para as disciplinas na aba Edital para ver este gráfico.</div>
+            : <PieChart
+                size={170}
+                donut={true}
+                formatValue={(v) => `${v}`}
+                data={weightByDiscArr.map(([name, w], i) => ({
+                  label: name.length > 22 ? name.slice(0,20)+'…' : name,
+                  value: w,
+                  color: COLORS[i % COLORS.length],
+                }))}
+              />
+          }
+          {totalWeight > 0 && (
+            <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, textAlign: 'center', letterSpacing: '0.05em' }}>
+              PESO TOTAL · {totalWeight}
+            </div>
+          )}
+        </div>
+      </div>
+      <style>{`@media (max-width: 760px) { .stats-dual-row { grid-template-columns: 1fr !important; } }`}</style>
+
+      {/* Charts grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
+
+        {/* Tipo de estudo (pizza) */}
+        <div className="glass" style={{ padding: 16 }}>
+          <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 12, fontFamily: 'JetBrains Mono, monospace' }}>HORAS POR TIPO DE ESTUDO</div>
           {hoursByTypeArr.length === 0
             ? <div style={{ fontSize: 12, color: 'var(--text-dim)', padding: '8px 0' }}>Registre sessões com tipo de estudo para ver este gráfico.</div>
-            : hoursByTypeArr.map(([t, h], i) => (
-              <div key={t} style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{t}</span>
-                  <span className="num" style={{ color: COLORS[i % COLORS.length], fontWeight: 700 }}>{h.toFixed(1)}h</span>
-                </div>
-                <Bar pct={h / hoursByTypeArr[0][1] * 100} color={COLORS[i % COLORS.length]} />
-              </div>
-            ))
+            : <PieChart
+                size={170}
+                donut={true}
+                formatValue={(v) => `${v.toFixed(1)}h`}
+                data={hoursByTypeArr.map(([t, h], i) => ({ label: t, value: h, color: COLORS[i % COLORS.length] }))}
+              />
           }
         </div>
 
@@ -552,41 +723,3 @@ function ConstanciaPercentCard({ logs, bestStreak }) {
   );
 }
 
-// ── Cumprimento independente: Objetiva vs Discursiva ──
-function EditalIndependenteCard({ objState, discState }) {
-  const obj = window.DA.getTotalStatsObj(objState.subjects || []);
-  const disc = window.DA.getTotalStatsDisc(discState.subjects || []);
-  const rows = [
-    { label: 'Objetiva',    pct: obj.percentage,  done: obj.checks,  total: obj.total,  color: 'var(--ciano)',    glow: '0 0 6px rgba(0,217,255,0.5)' },
-    { label: 'Discursiva',  pct: disc.percentage, done: disc.checks, total: disc.total, color: 'var(--coral)',    glow: '0 0 6px rgba(255,112,112,0.5)' },
-  ];
-  return (
-    <div className="glass" style={{ padding: 16 }}>
-      <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 700, marginBottom: 12, fontFamily: 'JetBrains Mono, monospace' }}>EDITAL · OBJETIVA × DISCURSIVA</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {rows.map(r => (
-          <div key={r.label}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12, marginBottom: 5 }}>
-              <span style={{ fontWeight: 700, color: r.color }}>{r.label}</span>
-              <span className="num" style={{ fontWeight: 800, color: r.color, filter: `drop-shadow(${r.glow})` }}>
-                {r.pct.toFixed(0)}%
-              </span>
-            </div>
-            <div style={{ height: 8, background: 'rgba(30,32,48,0.06)', borderRadius: 99, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', width: `${Math.min(100, r.pct)}%`,
-                background: `linear-gradient(90deg, ${r.color}aa, ${r.color})`,
-                borderRadius: 99,
-                boxShadow: r.glow,
-                transition: 'width 700ms cubic-bezier(0.16,1,0.3,1)',
-              }} />
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 3, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-              {r.done}/{r.total} checks
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
