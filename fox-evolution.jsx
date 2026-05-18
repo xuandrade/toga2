@@ -184,9 +184,9 @@ function FoxStage6Strategic() {
   return (
     <svg viewBox="0 0 200 250" width="130" height="163"
       style={{ overflow: 'visible', animation: 'pet-breath 2.5s ease-in-out infinite' }}>
-      {[[36,68],[164,68],[28,152],[172,152]].map(([cx,cy],i) => (
+      {[[36,68],[172,152]].map(([cx,cy],i) => (
         <g key={i} transform={`translate(${cx} ${cy})`}
-          style={{ animation: `sparkle-twinkle 2.2s ease-in-out ${i * 0.4}s infinite` }}>
+          style={{ animation: `sparkle-twinkle 2.2s ease-in-out ${i * 0.8}s infinite` }}>
           <path d="M0 -5 L1.2 -1.2 L5 0 L1.2 1.2 L0 5 L-1.2 1.2 L-5 0 L-1.2 -1.2 Z" fill="#F59E0B" />
         </g>
       ))}
@@ -226,9 +226,9 @@ function FoxStage7Advanced() {
   return (
     <svg viewBox="0 0 200 255" width="130" height="166"
       style={{ overflow: 'visible', animation: 'pet-breath 2.4s ease-in-out infinite' }}>
-      {[[34,60],[166,60],[27,153],[173,153],[100,30]].map(([cx,cy],i) => (
+      {[[34,60],[173,153]].map(([cx,cy],i) => (
         <g key={i} transform={`translate(${cx} ${cy})`}
-          style={{ animation: `sparkle-twinkle 2s ease-in-out ${i * 0.35}s infinite` }}>
+          style={{ animation: `sparkle-twinkle 2s ease-in-out ${i * 0.7}s infinite` }}>
           <path d="M0 -5 L1.2 -1.2 L5 0 L1.2 1.2 L0 5 L-1.2 1.2 L-5 0 L-1.2 -1.2 Z" fill="#F59E0B" />
         </g>
       ))}
@@ -266,11 +266,9 @@ function FoxStage8Master() {
   return (
     <svg viewBox="0 0 200 260" width="130" height="169"
       style={{ overflow: 'visible', animation: 'pet-breath 2.3s ease-in-out infinite' }}>
-      <circle cx="100" cy="122" r="88" fill="none" stroke="#F59E0B" strokeWidth="0.5" opacity="0.3"
-        style={{ animation: 'pet-aura-pulse 3s ease-in-out infinite' }} />
-      {[[34,54],[166,54],[24,149],[176,149],[100,24],[60,30],[140,30]].map(([cx,cy],i) => (
+      {[[34,54],[176,149],[100,24]].map(([cx,cy],i) => (
         <g key={i} transform={`translate(${cx} ${cy})`}
-          style={{ animation: `sparkle-twinkle 1.8s ease-in-out ${i * 0.3}s infinite` }}>
+          style={{ animation: `sparkle-twinkle 1.8s ease-in-out ${i * 0.6}s infinite` }}>
           <path d="M0 -6 L1.5 -1.5 L6 0 L1.5 1.5 L0 6 L-1.5 1.5 L-6 0 L-1.5 -1.5 Z"
             fill="#F59E0B" style={{ filter: 'drop-shadow(0 0 3px #F59E0B)' }} />
         </g>
@@ -337,10 +335,10 @@ function PetFoxProvider({ children }) {
 }
 
 // ── FoxEvolutionPanel ──────────────────────────────────────────
-// Layout compacto horizontal, idêntico ao PetCompanion, com integração completa:
-// sick state, dailyLogs (days off), streak e level-up flash.
-function FoxEvolutionPanel({ xp, sick = false, dailyLogs = [], streak = 0 }) {
-  const progression = evaluateFoxProgression(xp);
+// React.memo: só re-renderiza quando xp, sick, streak ou dailyLogs mudam.
+// useMemo: evita recalcular progressão e daysSinceLastStudy a cada render.
+const FoxEvolutionPanel = React.memo(function FoxEvolutionPanel({ xp, sick = false, dailyLogs = [], streak = 0 }) {
+  const progression = React.useMemo(() => evaluateFoxProgression(xp), [xp]);
   const { currentStage, nextStage, stageProgress, score, isMax } = progression;
   const FoxComponent = FOX_STAGE_COMPONENTS[currentStage.id - 1];
 
@@ -357,7 +355,10 @@ function FoxEvolutionPanel({ xp, sick = false, dailyLogs = [], streak = 0 }) {
     prevStageRef.current = currentStage.id;
   }, [currentStage.id]);
 
-  const daysOff = window.DA ? window.DA.daysSinceLastStudy(dailyLogs) : Infinity;
+  const daysOff = React.useMemo(
+    () => window.DA ? window.DA.daysSinceLastStudy(dailyLogs) : Infinity,
+    [dailyLogs]
+  );
   const daysOffText = daysOff === Infinity ? null
     : daysOff === 0 ? 'Estudou hoje 🦊'
     : daysOff === 1 ? 'Último estudo: ontem'
@@ -493,7 +494,12 @@ function FoxEvolutionPanel({ xp, sick = false, dailyLogs = [], streak = 0 }) {
       </div>
     </div>
   );
-}
+}, (prev, next) =>
+  prev.xp === next.xp &&
+  prev.sick === next.sick &&
+  prev.streak === next.streak &&
+  prev.dailyLogs === next.dailyLogs
+);
 
 window.PetFoxProvider = PetFoxProvider;
 window.FoxEvolutionPanel = FoxEvolutionPanel;
