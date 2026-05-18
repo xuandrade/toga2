@@ -842,16 +842,19 @@ function App() {
 
         {/* ── ABA: DESEMPENHO EM CONCURSOS ── */}
         {activeTab === 'concursos' && (
-          <ConcursosDesempenhoTab
-            provas={shared.historicoProvas || []}
-            setProvas={setHistoricoProvas}
-            onXpGain={(amount, kind) => {
-              setShared(s => ({ ...s, xp: (s.xp || 0) + amount }));
-              if (kind === 'victory') window.celebrateVictory && window.celebrateVictory();
-              else if (kind === 'high') window.celebrateHighEnergy && window.celebrateHighEnergy();
-              else if (amount > 0) window.celebrateLight && window.celebrateLight();
-            }}
-          />
+          <>
+            <FoxEvolutionPanel xp={shared.xp} />
+            <ConcursosDesempenhoTab
+              provas={shared.historicoProvas || []}
+              setProvas={setHistoricoProvas}
+              onXpGain={(amount, kind) => {
+                setShared(s => ({ ...s, xp: (s.xp || 0) + amount }));
+                if (kind === 'victory') window.celebrateVictory && window.celebrateVictory();
+                else if (kind === 'high') window.celebrateHighEnergy && window.celebrateHighEnergy();
+                else if (amount > 0) window.celebrateLight && window.celebrateLight();
+              }}
+            />
+          </>
         )}
 
         {/* ── ABA: ESTATÍSTICAS ── */}
@@ -983,14 +986,8 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-import { PetProvider } from "./contexts/PetContext";
-
-export default function App() {
-  return (
-    <PetProvider>
-       {/* TODO O RESTO DO SEU CÓDIGO FICA AQUI DENTRO */}
-       <SeuAppInteiro />
-    </PetProvider>
-  )
-}
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <PetFoxProvider>
+    <App />
+  </PetFoxProvider>
+);
