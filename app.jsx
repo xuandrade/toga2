@@ -984,3 +984,13 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+import { PetProvider } from "./contexts/PetContext";
+
+export default function App() {
+  return (
+    <PetProvider>
+       {/* TODO O RESTO DO SEU CÓDIGO FICA AQUI DENTRO */}
+       <SeuAppInteiro />
+    </PetProvider>
+  )
+}
