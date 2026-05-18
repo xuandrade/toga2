@@ -36,7 +36,6 @@ function MetricsRow({ shared, setShared, kind = 'all', title, cols }) {
   const metrics = kind === 'hours'     ? allMetrics.filter(m => m.key.startsWith('hours'))
                 : kind === 'questions' ? allMetrics.filter(m => m.key.startsWith('q'))
                 : allMetrics;
-  const cols = metrics.length;
 
   const headerEl = title ? (
     <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, marginBottom: 10 }}>
