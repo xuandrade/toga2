@@ -152,12 +152,11 @@ function MetricsRow({ shared, setShared, kind = 'all', title, cols }) {
   );
 }
 
-// ── WeeklyHoursChart: bar chart comparing this week (Mon-Sun) vs last week ──
+// ── WeeklyHoursChart: bar chart showing this week (Mon-Sun) daily hours ──
 function WeeklyHoursChart({ shared }) {
   const nowDate = new Date(); nowDate.setHours(0,0,0,0);
   const dayIdx = nowDate.getDay() === 0 ? 6 : nowDate.getDay() - 1; // 0=Mon..6=Sun
   const thisMonday = new Date(nowDate); thisMonday.setDate(nowDate.getDate() - dayIdx);
-  const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
 
   const DAYS_PT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   const logMap = new Map((shared.dailyLogs || []).map(l => [l.date, l.hours || 0]));
@@ -165,32 +164,22 @@ function WeeklyHoursChart({ shared }) {
 
   const days = DAYS_PT.map((label, i) => {
     const tDate = new Date(thisMonday); tDate.setDate(thisMonday.getDate() + i);
-    const lDate = new Date(lastMonday); lDate.setDate(lastMonday.getDate() + i);
     const tIso = tDate.toISOString().slice(0,10);
-    const lIso = lDate.toISOString().slice(0,10);
     const future = tDate > nowDate;
     return {
       label,
       thisH: future ? 0 : (logMap.get(tIso) || 0),
-      lastH: logMap.get(lIso) || 0,
       isToday: tIso === todayISO,
       future,
     };
   });
 
   const thisTotal = days.reduce((a, d) => a + d.thisH, 0);
-  const lastTotal = days.reduce((a, d) => a + d.lastH, 0);
-  const maxH = Math.max(...days.map(d => Math.max(d.thisH, d.lastH)), 0.5);
+  const maxH = Math.max(...days.map(d => d.thisH), 0.5);
   const goalDaily = shared.goals?.dailyHours || 0;
 
   const CYAN = '#00b8d4';
   const CYAN_GLOW = '#00d9ff';
-  const GHOST = 'rgba(91,71,184,0.18)';
-
-  const delta = thisTotal - lastTotal;
-  const deltaPct = lastTotal > 0 ? (delta / lastTotal) * 100 : (thisTotal > 0 ? 100 : 0);
-  const deltaColor = delta > 0.05 ? 'var(--esmeralda)' : delta < -0.05 ? 'var(--coral)' : 'var(--text-muted)';
-  const deltaArrow = delta > 0.05 ? '▲' : delta < -0.05 ? '▼' : '—';
 
   return (
     <div className="glass anim-slide-up" style={{
@@ -201,28 +190,17 @@ function WeeklyHoursChart({ shared }) {
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
         <div>
           <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
-            HORAS POR DIA · COMPARATIVO SEMANAL
+            HORAS POR DIA · SEMANA ATUAL
           </div>
           <div className="font-display" style={{ fontSize: 17, fontWeight: 700, marginTop: 4 }}>
             Esta semana <span className="num" style={{ color: CYAN, filter: `drop-shadow(0 0 6px ${CYAN_GLOW}55)` }}>{thisTotal.toFixed(1)}h</span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, marginLeft: 10 }}>vs semana passada {lastTotal.toFixed(1)}h</span>
           </div>
-        </div>
-        <div style={{
-          padding: '4px 10px', borderRadius: 99,
-          background: `${deltaColor === 'var(--esmeralda)' ? 'rgba(0,168,107,0.10)' : deltaColor === 'var(--coral)' ? 'rgba(232,93,93,0.10)' : 'rgba(30,32,48,0.05)'}`,
-          border: `1px solid ${deltaColor === 'var(--esmeralda)' ? 'rgba(0,168,107,0.30)' : deltaColor === 'var(--coral)' ? 'rgba(232,93,93,0.30)' : 'rgba(30,32,48,0.10)'}`,
-          fontSize: 11, fontWeight: 800, color: deltaColor,
-          fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.04em',
-        }}>
-          {deltaArrow} {Math.abs(deltaPct).toFixed(0)}%
         </div>
       </div>
 
       <div className="weekly-hours-bars" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8, alignItems: 'end', minHeight: 140 }}>
         {days.map((d, i) => {
           const tH = (d.thisH / maxH) * 110;
-          const lH = (d.lastH / maxH) * 110;
           const goalLineY = goalDaily > 0 ? Math.min(110, (goalDaily / maxH) * 110) : null;
           return (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
@@ -234,7 +212,7 @@ function WeeklyHoursChart({ shared }) {
               }}>
                 {d.thisH > 0 ? d.thisH.toFixed(1) : ''}
               </div>
-              <div style={{ position: 'relative', width: '100%', height: 110, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 3 }}>
+              <div style={{ position: 'relative', width: '100%', height: 110, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                 {goalLineY !== null && (
                   <div style={{
                     position: 'absolute', left: 0, right: 0, bottom: `${goalLineY}px`,
@@ -242,15 +220,9 @@ function WeeklyHoursChart({ shared }) {
                     pointerEvents: 'none',
                   }} />
                 )}
-                {/* Last week (ghost bar) */}
-                <div style={{
-                  width: '38%', height: `${lH}px`, minHeight: d.lastH > 0 ? 3 : 0,
-                  background: GHOST, borderRadius: '6px 6px 0 0',
-                  transition: 'height 700ms cubic-bezier(0.16,1,0.3,1)',
-                }} />
                 {/* This week */}
                 <div style={{
-                  width: '52%', height: `${tH}px`, minHeight: d.thisH > 0 ? 4 : 0,
+                  width: '70%', height: `${tH}px`, minHeight: d.thisH > 0 ? 4 : 0,
                   background: d.future
                     ? 'rgba(0,184,212,0.10)'
                     : `linear-gradient(180deg, ${CYAN_GLOW}, ${CYAN})`,
@@ -278,10 +250,6 @@ function WeeklyHoursChart({ shared }) {
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span style={{ display: 'inline-block', width: 12, height: 8, background: `linear-gradient(180deg, ${CYAN_GLOW}, ${CYAN})`, borderRadius: 3 }} />
           ESTA SEMANA
-        </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ display: 'inline-block', width: 12, height: 8, background: GHOST, borderRadius: 3 }} />
-          SEMANA PASSADA
         </span>
         {goalDaily > 0 && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
