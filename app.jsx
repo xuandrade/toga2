@@ -745,30 +745,47 @@ function App() {
               </div>
             </div>
 
-            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '60ms' }}>
+            <section className="anim-slide-up hours-overview-row" style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.75fr) minmax(0, 1fr)',
+              gap: 14,
+              marginBottom: 16,
+              animationDelay: '50ms',
+              alignItems: 'stretch',
+            }}>
+              <WeeklyHoursChart shared={shared} />
+              <MetricsRow shared={shared} setShared={setShared} kind="hours" title="METAS DE HORAS" cols={1} />
+            </section>
+            <style>{`@media (max-width: 860px) { .hours-overview-row { grid-template-columns: 1fr !important; } }`}</style>
+
+            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '85ms' }}>
               <ConstanciaTracker logs={shared.dailyLogs} bestStreak={shared.bestStreak} />
             </section>
 
-            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '80ms' }}>
-              <MetricsRow shared={shared} setShared={setShared} />
-            </section>
-
-            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '90ms' }}>
-              <AccuracyOverallCard shared={shared} />
-            </section>
-
-            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '100ms' }}>
-              <TotalsSection shared={shared} objState={objState} discState={discState} />
-            </section>
-
-            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '120ms' }}>
-              <InsightsPanel shared={shared} objState={objState} discState={discState} />
-            </section>
-
-            <div className="dual-grid anim-slide-up" style={{ display: 'grid', gap: 14, marginBottom: 16, animationDelay: '140ms' }}>
+            <div className="dual-grid anim-slide-up" style={{ display: 'grid', gap: 14, marginBottom: 16, animationDelay: '100ms' }}>
               <StudyHeatmap logs={shared.dailyLogs} />
               <QuestionsFlashcardsHeatmap logs={shared.dailyLogs} />
             </div>
+
+            <section className="anim-slide-up metrics-line" style={{
+              display: 'grid',
+              gap: 14,
+              gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+              marginBottom: 16,
+              animationDelay: '115ms',
+            }}>
+              <MetricsRow shared={shared} setShared={setShared} kind="questions" title="METAS DE QUESTÕES" />
+              <AccuracyOverallCard shared={shared} />
+            </section>
+            <style>{`@media (max-width: 900px) { .metrics-line { grid-template-columns: 1fr !important; } }`}</style>
+
+            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '130ms' }}>
+              <InsightsPanel shared={shared} objState={objState} discState={discState} />
+            </section>
+
+            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '150ms' }}>
+              <TotalsSection shared={shared} objState={objState} discState={discState} />
+            </section>
           </>
         )}
 
