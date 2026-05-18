@@ -35,7 +35,7 @@ function calcProvaXp(entry, isNew, prevProvas) {
   return { xp, kind };
 }
 
-function computeInsights(provas) {
+function computeProvasInsights(provas) {
   const out = [];
   if (!provas || provas.length === 0) return out;
 
@@ -410,7 +410,7 @@ function DisciplineEvolutionTable({ provas }) {
 
 // ── InsightsPanel ──
 function ConcursosInsightsPanel({ provas }) {
-  const insights = computeInsights(provas);
+  const insights = computeProvasInsights(provas);
   if (insights.length === 0) return null;
 
   return (
