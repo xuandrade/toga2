@@ -337,7 +337,9 @@ function PetFoxProvider({ children }) {
 }
 
 // ── FoxEvolutionPanel ──────────────────────────────────────────
-function FoxEvolutionPanel({ xp }) {
+// Layout compacto horizontal, idêntico ao PetCompanion, com integração completa:
+// sick state, dailyLogs (days off), streak e level-up flash.
+function FoxEvolutionPanel({ xp, sick = false, dailyLogs = [], streak = 0 }) {
   const progression = evaluateFoxProgression(xp);
   const { currentStage, nextStage, stageProgress, score, isMax } = progression;
   const FoxComponent = FOX_STAGE_COMPONENTS[currentStage.id - 1];
@@ -355,130 +357,140 @@ function FoxEvolutionPanel({ xp }) {
     prevStageRef.current = currentStage.id;
   }, [currentStage.id]);
 
+  const daysOff = window.DA ? window.DA.daysSinceLastStudy(dailyLogs) : Infinity;
+  const daysOffText = daysOff === Infinity ? null
+    : daysOff === 0 ? 'Estudou hoje 🦊'
+    : daysOff === 1 ? 'Último estudo: ontem'
+    : `${daysOff} dias sem estudar`;
+
   return (
-    <div className="glass" style={{ padding: '20px 22px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
-      {/* Warm background tint */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: `radial-gradient(ellipse at 72% 50%, ${currentStage.color}18 0%, transparent 60%)`,
-      }} />
+    <div className="glass" style={{
+      padding: 18,
+      display: 'flex', alignItems: 'center', gap: 18,
+      position: 'relative', overflow: 'visible',
+      borderColor: sick ? 'rgba(245,158,11,0.4)' : undefined,
+      background: sick
+        ? 'linear-gradient(135deg, rgba(255,250,240,0.85), rgba(255,235,210,0.8))'
+        : undefined,
+    }}>
 
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, position: 'relative' }}>
-        <div>
-          <div style={{ fontSize: 9, letterSpacing: '0.22em', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
-            MASCOTE · RAPOSA JURÍDICA
-          </div>
-          <div className="font-display" style={{ fontSize: 19, fontWeight: 700, marginTop: 3 }}>
-            {currentStage.name}
-          </div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2, fontStyle: 'italic' }}>
-            {currentStage.desc}
-          </div>
-        </div>
+      {/* Fox sprite + level-up flash */}
+      <div style={{ flexShrink: 0, width: 130, height: 130, position: 'relative',
+        display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{
-          flexShrink: 0,
-          padding: '5px 12px', borderRadius: 20,
-          background: `${currentStage.accent}22`, color: currentStage.accent,
-          fontFamily: 'JetBrains Mono, monospace', fontSize: 10, fontWeight: 700,
-          border: `1px solid ${currentStage.accent}44`,
-          marginLeft: 12,
-        }}>
-          FASE {currentStage.id}/8
-        </div>
-      </div>
-
-      {/* Fox + progress */}
-      <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
-        {/* Fox illustration */}
-        <div style={{
-          flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 150, height: 170,
-          background: `radial-gradient(circle at center, ${currentStage.color}30 0%, transparent 60%)`,
-          borderRadius: 14,
+          opacity: sick ? 0.65 : 1,
+          filter: sick ? 'saturate(0.45) brightness(0.9)' : 'none',
+          transition: 'all 400ms',
         }}>
           <FoxComponent progress={stageProgress} />
         </div>
 
-        {/* XP & milestones */}
-        <div style={{ flex: 1, minWidth: 160 }}>
-          {/* XP bar */}
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5, fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}>
-              <span style={{ color: 'var(--text-muted)' }}>
-                <span className="num" style={{ color: currentStage.accent, fontSize: 14, fontWeight: 700 }}>
-                  {score.toLocaleString('pt-BR')}
-                </span>{' '}XP
-              </span>
-              {!isMax && nextStage && (
-                <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>
-                  próx: {nextStage.minXp.toLocaleString('pt-BR')}
-                </span>
-              )}
+        {/* Sick overlay: zzz + thermometer icon */}
+        {sick && (
+          <>
+            <div style={{ position: 'absolute', top: 6, right: 6, fontSize: 18,
+              animation: 'pet-bob 2s ease-in-out infinite' }}>🤒</div>
+            <div style={{ position: 'absolute', top: 16, left: 8, fontSize: 13, color: '#7ec8e3',
+              fontWeight: 700, animation: 'pet-zzz-float 3s ease-in-out infinite' }}>z</div>
+            <div style={{ position: 'absolute', top: 6, left: 18, fontSize: 9, color: '#7ec8e3',
+              fontWeight: 700, animation: 'pet-zzz-float 3s ease-in-out 0.7s infinite' }}>z</div>
+          </>
+        )}
+
+        {/* Level-up flash */}
+        {showLevelUp && (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 12,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            background: `radial-gradient(circle, ${currentStage.color}99, transparent 70%)`,
+            animation: 'fade-in 400ms ease-out',
+          }}>
+            <div style={{ fontSize: 30, animation: 'pet-bob 0.8s ease-in-out infinite' }}>🦊</div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: currentStage.accent,
+              fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.12em' }}>EVOLUIU!</div>
+          </div>
+        )}
+      </div>
+
+      {/* Info panel */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Badges */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+          <span className="num" style={{
+            fontSize: 9, padding: '2px 7px', borderRadius: 4,
+            background: `${currentStage.accent}22`, color: currentStage.accent,
+            fontWeight: 700, letterSpacing: '0.1em',
+            border: `1px solid ${currentStage.accent}55`,
+          }}>
+            FASE {currentStage.id} / 8
+          </span>
+          {sick && (
+            <span className="num" style={{
+              fontSize: 9, padding: '2px 7px', borderRadius: 4,
+              background: 'rgba(245,158,11,0.18)', color: '#a14e0c',
+              fontWeight: 700, letterSpacing: '0.1em',
+              border: '1px solid rgba(245,158,11,0.5)',
+              animation: 'amber-pulse 2s ease-in-out infinite',
+            }}>
+              🤒 DOENTINHA
+            </span>
+          )}
+        </div>
+
+        {/* Stage name */}
+        <div className="font-display" style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+          {currentStage.name}
+        </div>
+
+        {/* Description */}
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, fontStyle: 'italic', lineHeight: 1.35 }}>
+          {sick
+            ? 'Sua raposinha está doentinha. Estude 2 dias seguidos para curá-la 💚'
+            : currentStage.desc}
+        </div>
+
+        {/* XP progress bar */}
+        {!isMax && nextStage && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10,
+              color: 'var(--text-dim)', marginBottom: 3,
+              fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+              <span>até <span style={{ color: nextStage.accent }}>{nextStage.name}</span></span>
+              <span className="num">{score.toLocaleString('pt-BR')} / {nextStage.minXp.toLocaleString('pt-BR')} XP</span>
             </div>
-            <div style={{ height: 8, background: 'rgba(12,13,18,0.08)', borderRadius: 6, overflow: 'hidden' }}>
+            <div style={{ height: 6, background: 'rgba(12,13,18,0.06)', borderRadius: 4, overflow: 'hidden' }}>
               <div style={{
-                height: '100%',
-                width: `${stageProgress}%`,
+                height: '100%', width: `${stageProgress}%`,
                 background: `linear-gradient(90deg, ${currentStage.color}, ${currentStage.accent})`,
-                boxShadow: `0 0 10px ${currentStage.accent}66`,
-                borderRadius: 6,
+                boxShadow: `0 0 8px ${currentStage.accent}99`,
                 transition: 'width 600ms ease',
               }} />
             </div>
           </div>
-
-          {/* Stage milestone dots */}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
-            {FOX_STAGES.map(s => {
-              const unlocked = s.id <= currentStage.id;
-              return (
-                <div key={s.id} style={{
-                  width: 24, height: 24, borderRadius: 6,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
-                  background: unlocked ? `${s.accent}22` : 'rgba(12,13,18,0.04)',
-                  border: `1px solid ${unlocked ? s.accent + '55' : 'rgba(12,13,18,0.08)'}`,
-                  color: unlocked ? s.accent : 'var(--text-dim)',
-                  transition: 'all 300ms',
-                }}>
-                  {unlocked ? '★' : s.id}
-                </div>
-              );
-            })}
+        )}
+        {isMax && (
+          <div style={{ marginTop: 10, fontSize: 11, color: currentStage.accent,
+            fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>
+            ✨ Excelência máxima atingida!
           </div>
+        )}
 
-          <div style={{ fontSize: 10.5, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-            {isMax
-              ? '✨ Jornada completa. Pronto(a) para a toga!'
-              : `Faltam ${(nextStage.minXp - score).toLocaleString('pt-BR')} XP para ${nextStage.name}`}
-          </div>
+        {/* Days off + streak */}
+        <div style={{ marginTop: 8, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+          {daysOffText && (
+            <div style={{ fontSize: 10.5, color: 'var(--text-dim)',
+              fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+              {daysOffText}
+            </div>
+          )}
+          {streak > 0 && (
+            <div style={{ fontSize: 10.5, color: 'var(--ambar)',
+              fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
+              🔥 {streak} dia{streak !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Level-up flash overlay */}
-      {showLevelUp && (
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 10, borderRadius: 'inherit',
-          background: `radial-gradient(ellipse at center, ${currentStage.color}55, transparent 70%)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: 'fade-in 400ms ease-out',
-          pointerEvents: 'none',
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 44, animation: 'pet-bob 1s ease-in-out infinite' }}>🦊</div>
-            <div className="font-display" style={{
-              fontSize: 22, fontWeight: 700, color: currentStage.accent,
-              textShadow: `0 0 20px ${currentStage.accent}88`,
-            }}>
-              EVOLUIU!
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-              {currentStage.name}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
