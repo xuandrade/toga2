@@ -683,7 +683,7 @@ function App() {
           <button key={tab.id} className={`nav-tab ${activeTab === tab.id ? 'nav-tab-active' : ''}`}
             onClick={() => setActiveTab(tab.id)}>
             <span className="nav-tab-icon">{tab.icon}</span>
-            <span style={tab.shortLabel ? { whiteSpace: 'normal', lineHeight: 1.25, fontSize: 10.5 } : undefined}>{tab.label}</span>
+            <span style={tab.shortLabel ? { whiteSpace: 'normal', lineHeight: 1.25, fontSize: 10.5, textAlign: 'left' } : undefined}>{tab.label}</span>
           </button>
         ))}
       </nav>
