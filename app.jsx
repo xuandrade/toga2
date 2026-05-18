@@ -13,16 +13,21 @@ const { useState, useEffect, useRef } = React;
 function AchievementToast({ kind, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 4500); return () => clearTimeout(t); }, []);
   const A = {
-    week_streak:    { title: '7 dias de constância',         sub: 'Uma semana inteira encadeada',         icon: '🔥', color: '#f59e0b' },
-    marathon:       { title: 'Maratonista',                  sub: 'Sessão de 90 min completa',            icon: '🛡', color: 'var(--tinta)' },
-    first_mastered: { title: 'Primeiro tema dominado',       sub: 'Um tópico conquistado',                icon: '⚡', color: '#00b8d4' },
-    half_edital:    { title: 'Meio edital',                  sub: '50% dos tópicos dominados',            icon: '🏆', color: 'var(--esmeralda)' },
-    backup_done:    { title: 'Backup baixado',               sub: 'Arquivo salvo no seu computador',      icon: '💾', color: 'var(--esmeralda)' },
-    restore_done:   { title: 'Backup restaurado',            sub: 'Seus dados foram recarregados',        icon: '🔄', color: '#00b8d4' },
-    reset_done:     { title: 'Sistema zerado',               sub: 'Tudo voltou ao estado inicial',        icon: '🌱', color: 'var(--esmeralda)' },
-    goals_saved:    { title: 'Metas atualizadas',            sub: 'Boa! Vamos cumprir',                   icon: '🎯', color: 'var(--tinta)' },
-    pet_sick:       { title: 'Sua dragãozinha adoeceu 🤒',   sub: 'Estude 2 dias seguidos para curá-la', icon: '🤒', color: '#f59e0b' },
-    pet_healed:     { title: 'Sua dragãozinha está curada!', sub: 'Cuidando dela com seus estudos',       icon: '💚', color: 'var(--esmeralda)' },
+    week_streak:       { title: '7 dias de constância',           sub: 'Uma semana inteira encadeada',          icon: '🔥', color: '#f59e0b' },
+    marathon:          { title: 'Maratonista',                    sub: 'Sessão de 90 min completa',             icon: '🛡', color: 'var(--tinta)' },
+    first_mastered:    { title: 'Primeiro tema dominado',         sub: 'Um tópico conquistado',                 icon: '⚡', color: '#00b8d4' },
+    half_edital:       { title: 'Meio edital',                    sub: '50% dos tópicos dominados',             icon: '🏆', color: 'var(--esmeralda)' },
+    backup_done:       { title: 'Backup baixado',                 sub: 'Arquivo salvo no seu computador',       icon: '💾', color: 'var(--esmeralda)' },
+    restore_done:      { title: 'Backup restaurado',              sub: 'Seus dados foram recarregados',         icon: '🔄', color: '#00b8d4' },
+    reset_done:        { title: 'Sistema zerado',                 sub: 'Tudo voltou ao estado inicial',         icon: '🌱', color: 'var(--esmeralda)' },
+    goals_saved:       { title: 'Metas atualizadas',              sub: 'Boa! Vamos cumprir',                    icon: '🎯', color: 'var(--tinta)' },
+    pet_sick:          { title: 'Sua dragãozinha adoeceu 🤒',     sub: 'Estude 2 dias seguidos para curá-la',  icon: '🤒', color: '#f59e0b' },
+    pet_healed:        { title: 'Sua dragãozinha está curada!',   sub: 'Cuidando dela com seus estudos',        icon: '💚', color: 'var(--esmeralda)' },
+    desemp_first:      { title: 'Estreia Oficial!',               sub: 'Primeiro concurso registrado',          icon: '🏛️', color: '#00b8d4' },
+    desemp_above:      { title: 'Aprovado(a) no papel! ✅',       sub: 'Você passou o corte neste concurso',    icon: '🎉', color: 'var(--esmeralda)' },
+    desemp_record:     { title: 'Novo recorde pessoal! 🏆',       sub: 'Seu melhor desempenho até agora',       icon: '🏆', color: '#C9A961' },
+    desemp_veteran:    { title: 'Veterano(a) de Concursos',       sub: '5 concursos registrados',               icon: '🎖️', color: 'var(--tinta)' },
+    desemp_consistent: { title: 'Em Evolução Constante',          sub: '3 concursos consecutivos em melhora',   icon: '📈', color: 'var(--esmeralda)' },
   };
   const a = A[kind] || A.first_mastered;
   return (
@@ -633,6 +638,74 @@ function App() {
   const handleRemoveSimulado = (id) => {
     setShared(s => ({ ...s, simulados: (s.simulados || []).filter(x => x.id !== id) }));
   };
+
+  const handleAddDesempenho = (record) => {
+    const prev = shared.desempenho || [];
+    const prevAchievements = shared.achievements || [];
+
+    // XP calculation
+    let xpGain = 30;
+    if (record.disciplinas && record.disciplinas.length >= 3) xpGain += 10;
+    if (record.observacoes && record.observacoes.length > 10) xpGain += 5;
+
+    const pct = record.corte > 0 ? (record.notaTotal / record.corte) * 100 : 0;
+    if (pct >= 100) xpGain += 60;
+    else if (pct >= 93) xpGain += 25;
+
+    if (prev.length > 0) {
+      const prevSorted = [...prev].sort((a, b) => a.data.localeCompare(b.data));
+      const prevLast = prevSorted[prevSorted.length - 1];
+      const prevPct = prevLast.corte > 0 ? (prevLast.notaTotal / prevLast.corte) * 100 : 0;
+      if (pct > prevPct + 0.5) xpGain += 15;
+    }
+
+    const allPcts = prev.map(r => r.corte > 0 ? (r.notaTotal / r.corte) * 100 : 0);
+    const bestPrev = allPcts.length > 0 ? Math.max(...allPcts) : 0;
+    const isNewRecord = pct > bestPrev + 0.1;
+    if (isNewRecord && prev.length > 0) xpGain += 20;
+
+    const list = [...prev, record];
+    const achievements = [...prevAchievements];
+    const toastQueue = [];
+
+    if (prev.length === 0 && !achievements.includes('desemp_first')) {
+      achievements.push('desemp_first');
+      toastQueue.push('desemp_first');
+    }
+    if (pct >= 100 && !achievements.includes('desemp_above')) {
+      achievements.push('desemp_above');
+      toastQueue.push('desemp_above');
+    }
+    if (isNewRecord && prev.length > 0) {
+      if (!achievements.includes('desemp_record')) achievements.push('desemp_record');
+      toastQueue.push('desemp_record');
+    }
+    if (list.length >= 5 && !achievements.includes('desemp_veteran')) {
+      achievements.push('desemp_veteran');
+      toastQueue.push('desemp_veteran');
+    }
+    if (list.length >= 3) {
+      const recentPcts = [...list].sort((a, b) => a.data.localeCompare(b.data))
+        .slice(-3).map(r => r.corte > 0 ? (r.notaTotal / r.corte) * 100 : 0);
+      const improving = recentPcts[1] > recentPcts[0] && recentPcts[2] > recentPcts[1];
+      if (improving && !achievements.includes('desemp_consistent')) {
+        achievements.push('desemp_consistent');
+        toastQueue.push('desemp_consistent');
+      }
+    }
+
+    setShared(s => ({ ...s, desempenho: list, achievements, xp: (s.xp || 0) + xpGain }));
+
+    setTimeout(() => {
+      toastQueue.forEach((k, i) => setTimeout(() => pushToast(k), i * 800));
+      if (pct >= 100) window.celebrateHighEnergy && window.celebrateHighEnergy();
+      else window.celebrateLight && window.celebrateLight();
+    }, 100);
+  };
+
+  const handleRemoveDesempenho = (id) => {
+    setShared(s => ({ ...s, desempenho: (s.desempenho || []).filter(x => x.id !== id) }));
+  };
   const handleRestore = (backup) => {
     setShared(backup.shared); setObjState(backup.objetiva); setDiscState(backup.discursiva);
     prevPetStageRef.current = window.DA.getPetStage(backup.shared.xp || 0);
@@ -660,6 +733,7 @@ function App() {
     { id: 'hoje',         label: 'HOJE',         icon: '🏠' },
     { id: 'edital',       label: 'EDITAL',       icon: '📋' },
     { id: 'simulados',    label: 'SIMULADOS',    icon: '🎯' },
+    { id: 'desempenho',   label: 'CONCURSOS',    icon: '🏛️' },
     { id: 'estatisticas', label: 'ESTATÍSTICAS', icon: '📊' },
     { id: 'historico',    label: 'HISTÓRICO',    icon: '📜' },
     { id: 'ajustes',      label: 'AJUSTES',      icon: '⚙️' },
@@ -835,6 +909,15 @@ function App() {
             mode={mode}
             onAddSimulado={handleAddSimulado}
             onRemoveSimulado={handleRemoveSimulado}
+          />
+        )}
+
+        {/* ── ABA: DESEMPENHO ── */}
+        {activeTab === 'desempenho' && (
+          <DesempenhoTab
+            shared={shared}
+            onAddDesempenho={handleAddDesempenho}
+            onRemoveDesempenho={handleRemoveDesempenho}
           />
         )}
 

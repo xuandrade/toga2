@@ -516,6 +516,7 @@ const INITIAL_SHARED = {
   shields: 0,
   dailyLogs: [],
   simulados: [],
+  desempenho: [],
   goals: { dailyHours: 4, weeklyHours: 28, dailyQuestions: 40, weeklyQuestions: 250, dailyFlashcards: 30 },
   xp: 0,
   achievements: [],
