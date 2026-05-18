@@ -745,13 +745,18 @@ function App() {
               </div>
             </div>
 
-            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '50ms' }}>
+            <section className="anim-slide-up hours-overview-row" style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.75fr) minmax(0, 1fr)',
+              gap: 14,
+              marginBottom: 16,
+              animationDelay: '50ms',
+              alignItems: 'stretch',
+            }}>
               <WeeklyHoursChart shared={shared} />
+              <MetricsRow shared={shared} setShared={setShared} kind="hours" title="METAS DE HORAS" cols={1} />
             </section>
-
-            <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '70ms' }}>
-              <MetricsRow shared={shared} setShared={setShared} kind="hours" title="METAS DE HORAS" />
-            </section>
+            <style>{`@media (max-width: 860px) { .hours-overview-row { grid-template-columns: 1fr !important; } }`}</style>
 
             <section className="anim-slide-up" style={{ marginBottom: 16, animationDelay: '85ms' }}>
               <ConstanciaTracker logs={shared.dailyLogs} bestStreak={shared.bestStreak} />

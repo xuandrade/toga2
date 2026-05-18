@@ -13,7 +13,7 @@ function incentiveFor(progress) {
 }
 
 // ── MetricsRow: configurable card row (filter by kind: 'all' | 'hours' | 'questions') ──
-function MetricsRow({ shared, setShared, kind = 'all', title }) {
+function MetricsRow({ shared, setShared, kind = 'all', title, cols }) {
   const nowDate = new Date(); nowDate.setHours(0,0,0,0);
   const todayISO = nowDate.toISOString().slice(0,10);
   const daysFromMonday = nowDate.getDay() === 0 ? 6 : nowDate.getDay() - 1;
@@ -47,7 +47,7 @@ function MetricsRow({ shared, setShared, kind = 'all', title }) {
   return (
     <div>
       {headerEl}
-      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: `repeat(${cols}, 1fr)` }} className={`metrics-row metrics-row-${kind}`}>
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: `repeat(${cols || metrics.length}, 1fr)` }} className={`metrics-row metrics-row-${kind}`}>
       {metrics.map((m, i) => {
         const numericValue = parseFloat(m.value) || 0;
         const goal = m.goal || 0;
