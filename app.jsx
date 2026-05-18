@@ -845,6 +845,12 @@ function App() {
           <ConcursosDesempenhoTab
             provas={shared.historicoProvas || []}
             setProvas={setHistoricoProvas}
+            onXpGain={(amount, kind) => {
+              setShared(s => ({ ...s, xp: (s.xp || 0) + amount }));
+              if (kind === 'victory') window.celebrateVictory && window.celebrateVictory();
+              else if (kind === 'high') window.celebrateHighEnergy && window.celebrateHighEnergy();
+              else if (amount > 0) window.celebrateLight && window.celebrateLight();
+            }}
           />
         )}
 
