@@ -548,6 +548,7 @@ function App() {
   const [cinematicToasts, setCinematicToasts] = useState([]);
   const [evolutionEvent, setEvolutionEvent] = useState(null);
   const prevPetStageRef = useRef(window.DA.getPetStage(shared.xp));
+  const [weeklyReportOpen, setWeeklyReportOpen] = useState(false);
 
   const pushToast = (kind) => {
     if (CINEMATIC_KINDS.has(kind)) {
@@ -556,6 +557,16 @@ function App() {
       setToasts(t => [...t, { id: Math.random(), kind }]);
     }
   };
+
+  // Show weekly report on first visit of each new week (weeks start Monday)
+  useEffect(() => {
+    const currentWeekKey = window.getCurrentWeekKey();
+    const lastSeen = localStorage.getItem('toga_weekly_report_seen');
+    if (lastSeen !== currentWeekKey && (shared.dailyLogs || []).length > 0) {
+      const t = setTimeout(() => setWeeklyReportOpen(true), 1400);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   useEffect(() => {
     const stage = window.DA.getPetStage(shared.xp);
@@ -1160,6 +1171,10 @@ function App() {
       {evolutionEvent && <EvolutionModal fromStage={evolutionEvent.from} toStage={evolutionEvent.to} onClose={() => setEvolutionEvent(null)} />}
       {toasts.map(t => <AchievementToast key={t.id} kind={t.kind} onDone={() => setToasts(ts => ts.filter(x => x.id !== t.id))} />)}
       {cinematicToasts.slice(-1).map(t => <CinematicAchievementToast key={t.id} kind={t.kind} onDone={() => setCinematicToasts(ts => ts.filter(x => x.id !== t.id))} />)}
+      <WeeklyReportModal open={weeklyReportOpen} shared={shared} onClose={() => {
+        localStorage.setItem('toga_weekly_report_seen', window.getCurrentWeekKey());
+        setWeeklyReportOpen(false);
+      }} />
 
       <TweaksPanel title="Tweaks · TOGA">
         <TweakSection label="Modo">
@@ -1192,6 +1207,10 @@ function App() {
           <TweakButton label="🎉 Meta"    onClick={() => window.celebrateHighEnergy && window.celebrateHighEnergy()} />
           <TweakButton label="🏆 Vitória" onClick={() => window.celebrateVictory && window.celebrateVictory()} />
           <TweakButton label="🌟 Evolução" onClick={() => window.celebrateEvolution && window.celebrateEvolution()} />
+        </TweakSection>
+        <TweakSection label="Relatório Semanal">
+          <TweakButton label="📋 Abrir relatório" onClick={() => setWeeklyReportOpen(true)} />
+          <TweakButton label="🔄 Reset semana vista" onClick={() => { localStorage.removeItem('toga_weekly_report_seen'); }} />
         </TweakSection>
         <TweakSection label="Limpar dados">
           <TweakButton label="Reset Objetiva"   onClick={() => setObjState(window.DA.INITIAL_OBJETIVA)} />
