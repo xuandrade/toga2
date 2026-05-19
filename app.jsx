@@ -13,18 +13,29 @@ const { useState, useEffect, useRef } = React;
 function AchievementToast({ kind, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 4500); return () => clearTimeout(t); }, []);
   const A = {
-    week_streak:    { title: '7 dias de constância',         sub: 'Uma semana inteira encadeada',         icon: '🔥', color: '#f59e0b' },
-    marathon:       { title: 'Maratonista',                  sub: 'Sessão de 90 min completa',            icon: '🛡', color: 'var(--tinta)' },
-    first_mastered: { title: 'Primeiro tema dominado',       sub: 'Um tópico conquistado',                icon: '⚡', color: '#00b8d4' },
-    half_edital:    { title: 'Meio edital',                  sub: '50% dos tópicos dominados',            icon: '🏆', color: 'var(--esmeralda)' },
-    backup_done:    { title: 'Backup baixado',               sub: 'Arquivo salvo no seu computador',      icon: '💾', color: 'var(--esmeralda)' },
-    restore_done:   { title: 'Backup restaurado',            sub: 'Seus dados foram recarregados',        icon: '🔄', color: '#00b8d4' },
-    reset_done:     { title: 'Sistema zerado',               sub: 'Tudo voltou ao estado inicial',        icon: '🌱', color: 'var(--esmeralda)' },
-    goals_saved:    { title: 'Metas atualizadas',            sub: 'Boa! Vamos cumprir',                   icon: '🎯', color: 'var(--tinta)' },
-    pet_sick:       { title: 'Sua dragãozinha adoeceu 🤒',   sub: 'Estude 2 dias seguidos para curá-la', icon: '🤒', color: '#f59e0b' },
-    pet_healed:     { title: 'Sua dragãozinha está curada!', sub: 'Cuidando dela com seus estudos',       icon: '💚', color: 'var(--esmeralda)' },
+    week_streak:       { title: '7 dias de constância',         sub: 'Uma semana inteira encadeada',              icon: '🔥', color: '#f59e0b' },
+    marathon:          { title: 'Maratonista',                  sub: 'Sessão de 90 min completa',                 icon: '🛡', color: 'var(--tinta)' },
+    first_mastered:    { title: 'Primeiro tema dominado',       sub: 'Um tópico conquistado',                     icon: '⚡', color: '#00b8d4' },
+    half_edital:       { title: 'Meio edital',                  sub: '50% dos tópicos dominados',                 icon: '🏆', color: 'var(--esmeralda)' },
+    backup_done:       { title: 'Backup baixado',               sub: 'Arquivo salvo no seu computador',           icon: '💾', color: 'var(--esmeralda)' },
+    restore_done:      { title: 'Backup restaurado',            sub: 'Seus dados foram recarregados',             icon: '🔄', color: '#00b8d4' },
+    reset_done:        { title: 'Sistema zerado',               sub: 'Tudo voltou ao estado inicial',             icon: '🌱', color: 'var(--esmeralda)' },
+    goals_saved:       { title: 'Metas atualizadas',            sub: 'Boa! Vamos cumprir',                        icon: '🎯', color: 'var(--tinta)' },
+    pet_sick:          { title: 'Sua dragãozinha adoeceu 🤒',   sub: 'Estude 2 dias seguidos para curá-la',      icon: '🤒', color: '#f59e0b' },
+    pet_healed:        { title: 'Sua dragãozinha está curada!', sub: 'Cuidando dela com seus estudos',            icon: '💚', color: 'var(--esmeralda)' },
+    // Blindado achievements (regular toast)
+    blindado_first:    { title: 'Primeiro Escudo Ativado',      sub: 'Sua primeira sessão blindada',              icon: '🛡️', color: '#5B47B8' },
+    blindado_5:        { title: 'Guardião do Foco',             sub: '5 sessões blindadas concluídas',            icon: '⚔️', color: '#5B47B8' },
+    blindado_monge:    { title: 'Caminho do Monge',             sub: 'Primeira sessão em Modo Monge completa',    icon: '🧘', color: '#C9A961' },
+    // Epic blindado achievements (handled by CinematicAchievementToast — this is fallback)
+    blindado_7day:     { title: 'Semana Blindada',              sub: '7 dias consecutivos no Modo Blindado',      icon: '🔥', color: '#f59e0b' },
+    blindado_25:       { title: 'Sentinela',                    sub: '25 sessões blindadas completadas',          icon: '🏰', color: '#5B47B8' },
+    blindado_50:       { title: 'Mestre Blindado',              sub: '50 sessões blindadas — lenda!',             icon: '⚡', color: '#00b8d4' },
+    blindado_100h:     { title: 'Centúria',                     sub: '100 horas em Modo Blindado',                icon: '🏆', color: '#C9A961' },
+    blindado_30day:    { title: 'Mês Blindado',                 sub: '30 dias consecutivos — nível supremo',      icon: '🌟', color: '#C9A961' },
   };
   const a = A[kind] || A.first_mastered;
+  const isAviso = kind.startsWith('pet_') || ['goals_saved','backup_done','restore_done','reset_done'].includes(kind);
   return (
     <div className="glass-strong toast-achievement" style={{
       position: 'fixed', top: 80, right: 20, zIndex: 80,
@@ -40,7 +51,7 @@ function AchievementToast({ kind, onDone }) {
       }}>{a.icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 9, letterSpacing: '0.2em', color: a.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>
-          {kind.startsWith('pet_') || ['goals_saved','backup_done','restore_done','reset_done'].includes(kind) ? 'AVISO' : 'CONQUISTA'}
+          {isAviso ? 'AVISO' : 'CONQUISTA'}
         </div>
         <div className="font-display" style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>{a.title}</div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{a.sub}</div>
@@ -48,6 +59,110 @@ function AchievementToast({ kind, onDone }) {
     </div>
   );
 }
+
+// ── Cinematic Achievement Toast — epic blindado milestones ──
+function CinematicAchievementToast({ kind, onDone }) {
+  const DISMISS_MS = 6000;
+  useEffect(() => { const t = setTimeout(onDone, DISMISS_MS); return () => clearTimeout(t); }, []);
+
+  const EPIC = {
+    blindado_7day:  { title: 'SEMANA BLINDADA', sub: '7 dias consecutivos de foco inabalável', icon: '🔥', color: '#f59e0b', glow: 'rgba(245,158,11,0.55)', bg: 'rgba(20,14,0,0.97)' },
+    blindado_25:    { title: 'SENTINELA',        sub: '25 sessões blindadas — você é incansável', icon: '🏰', color: '#5B47B8', glow: 'rgba(91,71,184,0.6)',  bg: 'rgba(8,6,20,0.97)'  },
+    blindado_50:    { title: 'MESTRE BLINDADO',  sub: '50 sessões de concentração absoluta',      icon: '⚡', color: '#00b8d4', glow: 'rgba(0,184,212,0.55)', bg: 'rgba(0,10,18,0.97)' },
+    blindado_100h:  { title: 'CENTÚRIA',         sub: '100 horas em Modo Blindado — lendário',    icon: '🏆', color: '#C9A961', glow: 'rgba(201,169,97,0.6)', bg: 'rgba(12,8,0,0.97)'  },
+    blindado_30day: { title: 'MÊS BLINDADO',     sub: '30 dias seguidos — foco de elite',         icon: '🌟', color: '#C9A961', glow: 'rgba(201,169,97,0.6)', bg: 'rgba(10,8,0,0.97)'  },
+  };
+  const a = EPIC[kind] || EPIC.blindado_7day;
+
+  // 8 particles with different trajectories
+  const particles = [
+    { dx: '0px', dy: '-60px', delay: '0ms' },
+    { dx: '42px', dy: '-42px', delay: '60ms' },
+    { dx: '60px', dy: '0px', delay: '120ms' },
+    { dx: '42px', dy: '42px', delay: '80ms' },
+    { dx: '0px', dy: '60px', delay: '40ms' },
+    { dx: '-42px', dy: '42px', delay: '100ms' },
+    { dx: '-60px', dy: '0px', delay: '20ms' },
+    { dx: '-42px', dy: '-42px', delay: '140ms' },
+  ];
+
+  return (
+    <>
+      <style>{`
+        @keyframes cinematic-enter {
+          0%   { opacity: 0; transform: translateY(32px) scale(0.88); }
+          60%  { opacity: 1; transform: translateY(-6px) scale(1.03); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes cinematic-particle {
+          0%   { transform: translate(0,0) scale(1.2); opacity: 1; }
+          100% { transform: translate(var(--pdx), var(--pdy)) scale(0); opacity: 0; }
+        }
+        @keyframes cinematic-progress {
+          from { width: 100%; }
+          to   { width: 0%; }
+        }
+        @keyframes cinematic-icon-pulse {
+          0%, 100% { transform: scale(1) rotate(-3deg); filter: drop-shadow(0 0 16px var(--pcolor)); }
+          50%      { transform: scale(1.12) rotate(3deg); filter: drop-shadow(0 0 28px var(--pcolor)); }
+        }
+      `}</style>
+      <div style={{
+        position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 95, animation: 'cinematic-enter 500ms cubic-bezier(0.2,0.8,0.2,1) forwards',
+        width: 'min(460px, calc(100vw - 32px))',
+      }}>
+        <div style={{
+          background: a.bg, borderRadius: 20,
+          border: `1.5px solid ${a.color}55`,
+          boxShadow: `0 0 0 1px ${a.color}22, 0 0 50px ${a.glow}, 0 32px 80px rgba(0,0,0,0.5)`,
+          overflow: 'hidden', position: 'relative',
+        }}>
+          {/* Particle burst — absolute positioned in the icon area */}
+          <div style={{ position: 'absolute', top: 28, left: 36, width: 0, height: 0 }}>
+            {particles.map((p, i) => (
+              <div key={i} style={{
+                position: 'absolute', width: 6, height: 6, borderRadius: '50%',
+                background: a.color,
+                '--pdx': p.dx, '--pdy': p.dy,
+                animation: `cinematic-particle 700ms ${p.delay} cubic-bezier(0.2,0.8,0.2,1) forwards`,
+              }} />
+            ))}
+          </div>
+
+          <div style={{ padding: '24px 24px 20px', display: 'flex', gap: 18, alignItems: 'center' }}>
+            <div style={{
+              fontSize: 44, flexShrink: 0,
+              '--pcolor': a.glow,
+              animation: 'cinematic-icon-pulse 1.6s ease-in-out infinite',
+            }}>{a.icon}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 8.5, letterSpacing: '0.35em', color: a.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 900, marginBottom: 5 }}>
+                ✦ CONQUISTA ÉPICA ✦
+              </div>
+              <div className="font-display" style={{ fontSize: 18, fontWeight: 800, color: a.color, letterSpacing: '-0.01em', lineHeight: 1.2, marginBottom: 4 }}>
+                {a.title}
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', lineHeight: 1.45 }}>{a.sub}</div>
+            </div>
+            <button onClick={onDone} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', fontSize: 18, flexShrink: 0, alignSelf: 'flex-start' }}>×</button>
+          </div>
+
+          {/* Auto-dismiss progress bar */}
+          <div style={{ height: 2, background: `${a.color}22` }}>
+            <div style={{
+              height: '100%', background: a.color,
+              animation: `cinematic-progress ${DISMISS_MS}ms linear forwards`,
+              boxShadow: `0 0 6px ${a.glow}`,
+            }} />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+const CINEMATIC_KINDS = new Set(['blindado_7day','blindado_25','blindado_50','blindado_100h','blindado_30day']);
 
 // ── Storage helpers ────────────────────────────────────────
 const KEYS = { shared: 'da_v3_shared', obj: 'da_v3_objetiva', disc: 'da_v3_discursiva', meta: 'da_v3_meta' };
@@ -430,10 +545,17 @@ function App() {
   const [legalModal, setLegalModal] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('toga_onboarded_tutorial'));
   const [toasts, setToasts] = useState([]);
+  const [cinematicToasts, setCinematicToasts] = useState([]);
   const [evolutionEvent, setEvolutionEvent] = useState(null);
   const prevPetStageRef = useRef(window.DA.getPetStage(shared.xp));
 
-  const pushToast = (kind) => setToasts(t => [...t, { id: Math.random(), kind }]);
+  const pushToast = (kind) => {
+    if (CINEMATIC_KINDS.has(kind)) {
+      setCinematicToasts(t => [...t, { id: Math.random(), kind }]);
+    } else {
+      setToasts(t => [...t, { id: Math.random(), kind }]);
+    }
+  };
 
   useEffect(() => {
     const stage = window.DA.getPetStage(shared.xp);
@@ -500,13 +622,64 @@ function App() {
   };
 
   const handleEnrichedLog = (logEntry, opts) => {
-    const noXp = opts && opts.noXp;
+    const noXp    = opts && opts.noXp;
     const bonusXp = (opts && opts.bonusXp) || 0;
+    const isBlindado = !!(logEntry.blindado);
+
     setShared(s => {
       const { logs, idx } = mergeLog(s.dailyLogs, logEntry);
       const day = logs[idx];
       const cross = noXp ? 0 : goalCrossBonus(day, (day.hours||0)-(logEntry.hours||0), (day.questions||0)-(logEntry.questions||0), s.goals);
-      return { ...withStreakState(s, logs), xp: s.xp + cross + (noXp ? 0 : bonusXp) };
+      let next = { ...withStreakState(s, logs), xp: s.xp + cross + (noXp ? 0 : bonusXp) };
+
+      if (isBlindado && !noXp) {
+        const today = new Date().toISOString().slice(0,10);
+        const bd = s.blindado || { sessions: 0, hours: 0, streak: 0, bestStreak: 0, lastDate: null, modesUsed: {}, achievements: [] };
+        const sessions  = (bd.sessions || 0) + 1;
+        const hours     = (bd.hours    || 0) + (logEntry.hours || 0);
+        const mode      = logEntry.blindadoMode || 'profundo';
+        const modesUsed = { ...bd.modesUsed, [mode]: ((bd.modesUsed || {})[mode] || 0) + 1 };
+
+        // Streak: consecutive days (weekends exempt)
+        let streak = bd.streak || 0;
+        if (bd.lastDate === today) {
+          // same day — no streak change
+        } else {
+          const d = new Date(); let checks = 0;
+          let prev = null;
+          do {
+            d.setDate(d.getDate() - 1);
+            checks++;
+            if (d.getDay() !== 0 && d.getDay() !== 6) { prev = d.toISOString().slice(0,10); break; }
+          } while (checks < 5);
+          if (bd.lastDate === today) {
+            // already counted
+          } else if (!bd.lastDate) {
+            streak = 1;
+          } else if (bd.lastDate === prev) {
+            streak = (bd.streak || 0) + 1;
+          } else {
+            streak = 1;
+          }
+        }
+        const bestStreak = Math.max(bd.bestStreak || 0, streak);
+        const earned     = bd.achievements || [];
+        const newEarned  = [...earned];
+        const maybeEarn  = (key) => { if (!newEarned.includes(key)) { newEarned.push(key); setTimeout(() => pushToast(key), 400); } };
+
+        if (sessions === 1)                                    maybeEarn('blindado_first');
+        if (sessions === 5)                                    maybeEarn('blindado_5');
+        if (sessions === 25)                                   maybeEarn('blindado_25');
+        if (sessions === 50)                                   maybeEarn('blindado_50');
+        if (modesUsed.monge === 1)                             maybeEarn('blindado_monge');
+        if (streak >= 7  && !earned.includes('blindado_7day')) maybeEarn('blindado_7day');
+        if (streak >= 30 && !earned.includes('blindado_30day'))maybeEarn('blindado_30day');
+        if (hours >= 100 && !earned.includes('blindado_100h')) maybeEarn('blindado_100h');
+
+        next = { ...next, blindado: { ...bd, sessions, hours, streak, bestStreak, lastDate: today, modesUsed, achievements: newEarned } };
+      }
+
+      return next;
     });
     window.celebrateLight && window.celebrateLight();
   };
@@ -870,6 +1043,50 @@ function App() {
                 <button className="btn-neon" onClick={() => setGoalsOpen(true)} style={{ fontSize: 13 }}>🎯 Configurar metas</button>
               </div>
             </section>
+
+            {/* Blindado settings + stats */}
+            <section style={{ marginBottom: 14 }}>
+              <div className="glass" style={{ padding: '18px 20px' }}>
+                <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--tinta)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, marginBottom: 6 }}>
+                  🛡 MODO BLINDADO · EXTENSÃO
+                </div>
+                <div className="font-display" style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Configurações de bloqueio</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Configure os sites bloqueados e o modo de foco padrão. A extensão é opcional — o timer funciona sem ela.
+                </div>
+
+                {/* Blindado stats strip */}
+                {(shared.blindado?.sessions || 0) > 0 && (() => {
+                  const bd = shared.blindado || {};
+                  const items = [
+                    { label: 'Sessões', value: bd.sessions || 0, unit: '', color: '#5B47B8' },
+                    { label: 'Horas blindadas', value: ((bd.hours || 0)).toFixed(1), unit: 'h', color: '#00b8d4' },
+                    { label: 'Streak atual', value: bd.streak || 0, unit: bd.streak > 1 ? ' dias' : ' dia', color: '#f59e0b' },
+                    { label: 'Recorde', value: bd.bestStreak || 0, unit: bd.bestStreak > 1 ? ' dias' : ' dia', color: '#C9A961' },
+                  ];
+                  return (
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+                      {items.map((it, i) => (
+                        <div key={i} style={{
+                          flex: '1 1 100px', padding: '10px 12px', borderRadius: 10,
+                          background: `${it.color}0e`, border: `1px solid ${it.color}22`,
+                        }}>
+                          <div style={{ fontSize: 9.5, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.08em', marginBottom: 4 }}>{it.label.toUpperCase()}</div>
+                          <div className="num" style={{ fontSize: 20, fontWeight: 800, color: it.color }}>{it.value}<span style={{ fontSize: 11 }}>{it.unit}</span></div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {typeof window.BlockerSettingsSection === 'function'
+                  ? <BlockerSettingsSection />
+                  : <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      Abra o timer <strong>🛡 Blindado</strong> para configurar os modos de foco e sites bloqueados.
+                    </div>
+                }
+              </div>
+            </section>
             <section style={{ marginBottom: 14 }}>
               <BackupSection shared={shared} objState={objState} discState={discState}
                 onRestore={handleRestore} onReset={handleReset} onToast={pushToast} />
@@ -901,10 +1118,12 @@ function App() {
       <SessionLogModal open={sessionLogOpen} subjects={combinedSubjects}
         initial={pomodoroPrefill ? pomodoroPrefill.initial : undefined}
         onSave={(log) => {
-          const fromPomo = !!pomodoroPrefill;
-          const noXp = fromPomo && pomodoroPrefill.awardXp === false;
-          const bonusXp = (fromPomo && pomodoroPrefill.awardXp === true) ? 5 : 0;
-          handleEnrichedLog(log, { noXp, bonusXp });
+          const fromPomo  = !!pomodoroPrefill;
+          const noXp      = fromPomo && pomodoroPrefill.awardXp === false;
+          const baseBonus = (fromPomo && pomodoroPrefill.awardXp === true) ? 5 : 0;
+          const modeBonus = (fromPomo && pomodoroPrefill.awardXp === true) ? (pomodoroPrefill.modeXpBonus || 0) : 0;
+          const entry     = fromPomo ? { ...log, blindado: pomodoroPrefill.blindado, blindadoMode: pomodoroPrefill.blindadoMode } : log;
+          handleEnrichedLog(entry, { noXp, bonusXp: baseBonus + modeBonus });
           setPomodoroPrefill(null);
         }}
         onClose={() => { setSessionLogOpen(false); setPomodoroPrefill(null); }}
@@ -921,15 +1140,16 @@ function App() {
         customStudyTypes={shared.customStudyTypes || []}
         onAddCustomStudyType={handleAddCustomStudyType}
         onCompleteSession={handleSession}
-        onOpenFullLog={({ durationMin, discipline, awardXp }) => {
+        blindadoStats={shared.blindado || {}}
+        onOpenFullLog={({ durationMin, discipline, awardXp, blindado, blindadoMode, modeXpBonus }) => {
           const totalMin = Math.max(0, Math.round(durationMin || 0));
-          const initial = {
-            date: new Date().toISOString().slice(0,10),
+          const initial  = {
+            date:      new Date().toISOString().slice(0,10),
             discipline: discipline || '',
-            hours: totalMin / 60,
-            source: awardXp ? 'pomodoro' : 'pomodoro-early',
+            hours:     totalMin / 60,
+            source:    awardXp ? 'pomodoro' : 'pomodoro-early',
           };
-          setPomodoroPrefill({ initial, awardXp: !!awardXp });
+          setPomodoroPrefill({ initial, awardXp: !!awardXp, blindado: !!blindado, blindadoMode, modeXpBonus: modeXpBonus || 0 });
           setPomodoroOpen(false);
           setSessionLogOpen(true);
         }} />
@@ -939,6 +1159,7 @@ function App() {
       {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
       {evolutionEvent && <EvolutionModal fromStage={evolutionEvent.from} toStage={evolutionEvent.to} onClose={() => setEvolutionEvent(null)} />}
       {toasts.map(t => <AchievementToast key={t.id} kind={t.kind} onDone={() => setToasts(ts => ts.filter(x => x.id !== t.id))} />)}
+      {cinematicToasts.slice(-1).map(t => <CinematicAchievementToast key={t.id} kind={t.kind} onDone={() => setCinematicToasts(ts => ts.filter(x => x.id !== t.id))} />)}
 
       <TweaksPanel title="Tweaks · TOGA">
         <TweakSection label="Modo">

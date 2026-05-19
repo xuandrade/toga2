@@ -516,3 +516,91 @@ html, body {
 
 /* ── AEGIS extras (preserve) ── */
 @keyframes aegis-evo-glow { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+/* ══════════════════════════════════════════════════════════════
+   MODO BLINDADO — Focus mode visual identities + premium effects
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Blindado streak badge pulse ── */
+@keyframes blindado-streak-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+}
+.blindado-streak-badge {
+  animation: blindado-streak-pulse 2s ease-in-out infinite;
+}
+
+/* ── Foco Leve: cyan shimmer ring ── */
+@keyframes ring-leve {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(0,217,255,0.45)); }
+  50%       { filter: drop-shadow(0 0 14px rgba(0,217,255,0.75)); }
+}
+
+/* ── Foco Profundo: violet deep pulse ── */
+@keyframes ring-profundo {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(91,71,184,0.55)); }
+  50%       { filter: drop-shadow(0 0 20px rgba(91,71,184,0.85)); }
+}
+
+/* ── Modo Monge: gold sacred glow ── */
+@keyframes ring-monge {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(201,169,97,0.45)); }
+  50%       { filter: drop-shadow(0 0 22px rgba(201,169,97,0.80)); }
+}
+
+/* ── Extension active indicator dot blink ── */
+@keyframes ext-active-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+.ext-active-dot { animation: ext-active-dot 1.8s ease-in-out infinite; }
+
+/* ── Cinematic toast enter ── */
+@keyframes cinematic-slide-up {
+  from { opacity: 0; transform: translateY(40px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Monge ambient particles ── */
+@keyframes monge-particle {
+  0%   { opacity: 0; transform: translateY(0) scale(0); }
+  20%  { opacity: 0.6; }
+  100% { opacity: 0; transform: translateY(-80px) scale(0.5); }
+}
+
+/* ── Profundo void pulse background ── */
+@keyframes profundo-void {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+/* ── Mode selector button glow transition ── */
+.focus-mode-btn {
+  transition: all 220ms cubic-bezier(0.2,0.8,0.2,1);
+}
+.focus-mode-btn:hover { transform: translateY(-2px); }
+
+/* ── Blindado XP badge sparkle ── */
+@keyframes xp-badge-in {
+  0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+  70%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.xp-badge-enter { animation: xp-badge-in 400ms cubic-bezier(0.2,0.8,0.2,1) forwards; }
+
+/* ── Cinematic achievement particle ── */
+@keyframes achievement-particle-fly {
+  0%   { transform: translate(0,0) scale(1.2); opacity: 1; }
+  100% { transform: translate(var(--pdx, 0px), var(--pdy, -50px)) scale(0); opacity: 0; }
+}
+
+/* ── Epic achievement glow border animation ── */
+@keyframes epic-border-glow {
+  0%, 100% { box-shadow: 0 0 0 1px var(--epic-color, rgba(91,71,184,0.3)), 0 0 40px var(--epic-glow, rgba(91,71,184,0.4)), 0 24px 60px rgba(0,0,0,0.4); }
+  50%       { box-shadow: 0 0 0 2px var(--epic-color, rgba(91,71,184,0.5)), 0 0 60px var(--epic-glow, rgba(91,71,184,0.6)), 0 24px 60px rgba(0,0,0,0.4); }
+}
+
+/* ── Blocker status pill ── */
+.blocker-active-pill {
+  animation: ext-active-dot 1.8s ease-in-out infinite;
+}
