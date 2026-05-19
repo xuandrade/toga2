@@ -1104,6 +1104,18 @@ function App() {
             </section>
             <section style={{ marginBottom: 14 }}>
               <div className="glass" style={{ padding: '18px 20px' }}>
+                <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, marginBottom: 6 }}>RELATÓRIO SEMANAL</div>
+                <div className="font-display" style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Resumo da semana anterior</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+                  Veja o relatório completo da semana passada com horas, disciplinas e insights.
+                </div>
+                <button className="btn-ghost" onClick={() => setWeeklyReportOpen(true)} style={{ fontSize: 13 }}>
+                  📋 Ver relatório semanal
+                </button>
+              </div>
+            </section>
+            <section style={{ marginBottom: 14 }}>
+              <div className="glass" style={{ padding: '18px 20px' }}>
                 <div style={{ fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, marginBottom: 6 }}>TUTORIAL</div>
                 <div className="font-display" style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>Rever o tutorial de boas-vindas</div>
                 <button className="btn-ghost" onClick={() => { localStorage.removeItem('toga_onboarded_tutorial'); setShowOnboarding(true); }} style={{ fontSize: 13 }}>📖 Ver tutorial novamente</button>
