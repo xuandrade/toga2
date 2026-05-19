@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🛡 Modo Blindado Ativo</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --leve:    #00B8D4;
+    --profundo:#5B47B8;
+    --monge:   #C9A961;
+  }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 50% 30%, #0E0A20 0%, #050308 100%);
+    color: white;
+    font-family: 'Inter', system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Ambient particles */
+  .particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    animation: particle-float linear infinite;
+    opacity: 0;
+  }
+  @keyframes particle-float {
+    0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+    10%  { opacity: 0.6; }
+    90%  { opacity: 0.3; }
+    100% { transform: translateY(-20px) scale(1.5); opacity: 0; }
+  }
+
+  /* Card */
+  .card {
+    position: relative;
+    width: min(480px, calc(100vw - 32px));
+    padding: 48px 40px;
+    border-radius: 24px;
+    text-align: center;
+    animation: card-enter 600ms cubic-bezier(0.2,0.8,0.2,1) forwards;
+  }
+  @keyframes card-enter {
+    from { opacity: 0; transform: translateY(24px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .card-leve    { border: 1px solid rgba(0,184,212,0.25);    box-shadow: 0 0 60px rgba(0,184,212,0.12), 0 0 120px rgba(0,184,212,0.05); background: rgba(0,10,18,0.9); }
+  .card-profundo{ border: 1px solid rgba(91,71,184,0.30);    box-shadow: 0 0 60px rgba(91,71,184,0.15), 0 0 120px rgba(91,71,184,0.06); background: rgba(6,4,16,0.95); }
+  .card-monge   { border: 1px solid rgba(201,169,97,0.25);   box-shadow: 0 0 60px rgba(201,169,97,0.10), 0 0 120px rgba(201,169,97,0.04); background: rgba(10,7,2,0.97); }
+
+  .shield-icon {
+    font-size: 72px;
+    display: block;
+    margin-bottom: 20px;
+    animation: shield-pulse 3s ease-in-out infinite;
+  }
+  @keyframes shield-pulse {
+    0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 12px var(--mode-color)); }
+    50%       { transform: scale(1.06); filter: drop-shadow(0 0 28px var(--mode-color)); }
+  }
+
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.35em;
+    color: var(--mode-color);
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+    line-height: 1.2;
+  }
+
+  .site-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 24px;
+    letter-spacing: 0.05em;
+  }
+
+  .timer-block {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 28px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    margin-bottom: 24px;
+    min-width: 160px;
+  }
+  .timer-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 6px;
+  }
+  .timer-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--mode-color);
+    letter-spacing: -0.02em;
+    filter: drop-shadow(0 0 12px var(--mode-color));
+  }
+
+  .phrase {
+    font-size: 13px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.6;
+    font-style: italic;
+    margin-bottom: 28px;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 200ms;
+    text-decoration: none;
+  }
+  .btn-back:hover {
+    background: rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.9);
+  }
+
+  .mode-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 99px;
+    border: 1px solid;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+  }
+  .mode-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    animation: dot-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+<div class="particles" id="particles"></div>
+
+<div class="card" id="card">
+  <span class="shield-icon">🛡</span>
+  <div class="label">✦ MODO BLINDADO ATIVO ✦</div>
+  <h1 id="title">Concentração máxima</h1>
+
+  <div class="mode-badge" id="modeBadge">
+    <div class="mode-badge-dot" id="modeDot"></div>
+    <span id="modeLabel">Foco Profundo</span>
+  </div>
+
+  <div class="site-name" id="siteName"></div>
+
+  <div class="timer-block">
+    <div class="timer-label">TEMPO RESTANTE</div>
+    <div class="timer-value" id="timerValue">--:--</div>
+  </div>
+
+  <p class="phrase" id="phrase">"Sua aprovação está sendo construída agora, neste silêncio."</p>
+
+  <a href="javascript:history.back()" class="btn-back">← Voltar</a>
+</div>
+
+<script>
+  const MODES = {
+    leve:     { color: '#00B8D4', label: '🌿 Foco Leve',    title: 'Foco ativado',          phrase: '"Pequenas ações consistentes constroem grandes resultados."' },
+    profundo: { color: '#5B47B8', label: '🔮 Foco Profundo', title: 'Concentração máxima',  phrase: '"Sua aprovação está sendo construída agora, neste silêncio."' },
+    monge:    { color: '#C9A961', label: '🧘 Modo Monge',    title: 'Silêncio total',         phrase: '"O caminho para a toga passa pelo silêncio que você escolheu agora."' },
+  };
+
+  // Lê parâmetros da URL
+  const params = new URLSearchParams(location.search);
+  const mode   = params.get('mode') || 'profundo';
+  const site   = params.get('site') || '';
+  const cfg    = MODES[mode] || MODES.profundo;
+
+  // Aplica tema
+  document.documentElement.style.setProperty('--mode-color', cfg.color);
+  document.getElementById('card').className       = `card card-${mode}`;
+  document.getElementById('title').textContent    = cfg.title;
+  document.getElementById('modeLabel').textContent = cfg.label;
+  document.getElementById('phrase').textContent   = cfg.phrase;
+  document.getElementById('modeBadge').style.borderColor = cfg.color + '55';
+  document.getElementById('modeBadge').style.color       = cfg.color;
+  document.getElementById('modeDot').style.background    = cfg.color;
+  document.getElementById('modeDot').style.boxShadow     = `0 0 6px ${cfg.color}`;
+  if (site) document.getElementById('siteName').textContent = site;
+
+  // Timer countdown
+  function updateTimer() {
+    chrome.storage.local.get(['togaActive', 'togaExpiry'], (data) => {
+      if (!data.togaActive) {
+        document.getElementById('timerValue').textContent = '--:--';
+        return;
+      }
+      if (!data.togaExpiry || data.togaExpiry === 0) {
+        document.getElementById('timerValue').textContent = '∞';
+        return;
+      }
+      const rem = Math.max(0, Math.floor((data.togaExpiry - Date.now()) / 1000));
+      const m   = Math.floor(rem / 60);
+      const s   = rem % 60;
+      document.getElementById('timerValue').textContent =
+        String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    });
+  }
+  updateTimer();
+  setInterval(updateTimer, 1000);
+
+  // Partículas decorativas
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left      = Math.random() * 100 + '%';
+    p.style.background = cfg.color;
+    p.style.animationDuration  = (6 + Math.random() * 10) + 's';
+    p.style.animationDelay     = (Math.random() * 8) + 's';
+    container.appendChild(p);
+  }
+</script>
+</body>
+</html>
